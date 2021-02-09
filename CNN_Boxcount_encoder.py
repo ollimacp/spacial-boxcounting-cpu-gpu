@@ -1,4 +1,3 @@
-import numpy as np
 
 
 #Variables---------------------------------------------------
@@ -11,9 +10,11 @@ shape = (maxIndexX, maxIndexY )
 Boxsize=[2,4,8,16,32,64,128]    #,256,512,1024]
 iteration = 0
 
+#Imports------------------------------------------------------------------------------------------
 
 import os
 #os.makedirs("images", exist_ok=True)
+import numpy as np
 
 '''
 Import Argument Parser to train/test models with specific arguments.
@@ -30,10 +31,8 @@ parser.add_argument("--lr", type=float, default=0.00002, help="adam: learning ra
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=32, help="dimensionality of the latent code")
 parser.add_argument("--img_size", type=int, default=ChunkLenght, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
-parser.add_argument("--sample_interval", type=int, default=4000, help="interval between image sampling")
 opt = parser.parse_args()
 print(opt)
 
@@ -53,7 +52,6 @@ def PrintException():
     print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
 
-#Imports------------------------------------------------------------------------------------------
 #Importing nessecary modules for creating machine learning networks, such as 
 import torch                                    #Pytorch machine learning framework.
 import torch.nn as nn                           #
@@ -66,11 +64,6 @@ from torch.autograd import Variable
 import torch.optim as optim
 #from torch.utils.data.sampler import SubsetRandomSampler
 
-
-
-
-
-
 import pickle
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -82,14 +75,9 @@ import BoxcountFeatureExtr
 import sklearn.preprocessing as preprocessing
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials  #hyperoptimization libary
 
-
 #import itertools
 from PIL import Image
 from os import listdir
-
-
-
-
 
 # Common Directories
 import pathlib              #Import pathlib to create a link to the directory where the file is at.
@@ -108,14 +96,6 @@ def showNPArrayAsImage(np2ddArray, title, colormap):
     plt.show(block=False)           #Show array as picture on screen, but dont block the programm to continue.
 
 
-
-
-
-
-
-
-
-
 #Variables---------------------------------------------------
 verbosity = False
 ChunkLenght = 128  # The picture will be hacked into pieces of chosen Size -> more Datapoints, less Ram, ...
@@ -127,7 +107,7 @@ shape = (maxIndexX, maxIndexY )
 Boxsize=[2,4,8,16,32,64,128]    #,256,512,1024]
 iteration = 0
 #os.makedirs("images", exist_ok=True)
-'''
+
 # Create a option object to store all variables
 class OptionObject:
   def __init__(self, n_epochs, batch_size, img_size, channels, learning_rate, b1, b2 ):
@@ -139,14 +119,14 @@ class OptionObject:
     self.b2 = b2   #second order momentum of gradient decay
     self.channels = channels
     self.n_cpu = 8
-'''
+    
 #self, n_epochs, batch_size, img_size, channels, learning_rate, b1, b2
 opt = OptionObject(100, 32, ChunkLenght, 1 , 0.00002, 0.5, 0.8)
 img_shape = (opt.channels, opt.img_size, opt.img_size)
 
 
 
-#Source: https://stackoverflow.com/questions/35751306/python-how-to-pad-numpy-array-with-zeros
+#Source: [20] https://stackoverflow.com/questions/35751306/python-how-to-pad-numpy-array-with-zeros
 #@jit(nopython=False)  #,forceobj=True) # Set "nopython" mode for best performance, equivalent to @njit
 def pad(array, reference, offset):
     """
@@ -177,7 +157,49 @@ def reshape_Data(PicNumPy,shape, original_shape):
     return PicNumPy
 
 
+#just functions via jupyter notebook with !command
+def delete_dataset_from_last_time(FileParentPath):
+    really = input("-->(y/n):  Do you want to delete the old Dataset? \n BE CARFUL: function can remove whole directorys, so dont change the Fileparentpath")
+    
+    
+    if really =="y":
+        OldDatasetSaveplace = FileParentPath+"/Datasets/test/"
+        try:
+            os.rmdir(OldDatasetSaveplace)
+            os.mkdir(OldDatasetSaveplace)
+            os.mkdir(OldDatasetSaveplace+"/features/")
+            os.mkdir(OldDatasetSaveplace+"/labels/")
+        except OSError:
+            print("Deleting old test dataset failed")
+            PrintException()
+        else:
+            print("Old test dataset deleted!")
+        
+        #!rm -rf OldDatasetSaveplace
+        #!mkdir OldDatasetSaveplace
+        #!mkdir OldDatasetSaveplace +"/features/"
+        #!mkdir OldDatasetSaveplace +"/labels/"
 
+
+        OldDatasetSaveplace = FileParentPath+"/Datasets/train/"
+        try:
+            os.rmdir(OldDatasetSaveplace)
+            os.mkdir(OldDatasetSaveplace)
+            os.mkdir(OldDatasetSaveplace+"/features/")
+            os.mkdir(OldDatasetSaveplace+"/labels/")
+        except OSError:
+            print("Deleting old train dataset failed")        #!rm -rf OldDatasetSaveplace
+            PrintException()
+            input("Press any key to continue")
+        else:
+            print("Old test dataset deleted!")
+        
+        #!mkdir OldDatasetSaveplace
+        #!mkdir OldDatasetSaveplace +"/features/"
+        #!mkdir OldDatasetSaveplace +"/labels/"
+    else:
+        print("Continue without deleting the old dataset")
+        input("Press any key to continue")
 
 
 #Setting device to GPU/CPU 
@@ -193,30 +215,17 @@ device = get_device()
 print("Chosen Devide is",device)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print("Imports and helper functions defined")
 
 
 
 #   Data Balancing/Reshaping Part-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 '''
-If rebuild  data == True, take the chosen Data and create atrain Data set from sigma-balanced  and 0-1 normalized and scaled gaußian distrubution and pack the test into the test set for maxemizing data-usage
-
 The data has to be balanced in multiple ways to prevent overfitting.
-For example not all pictures can be used to train data. Binary classes can be balanced just by taking 50/50 balance for the training dataset.
-Cause the lables are the calculated arrays of a cpu driven program, there is just a continuum of output arrays for input arrays.
+For example not all pictures can be used to train data. 
+Binary classes can be balanced just by taking 50/50 balance for the training dataset.
+Cause the lables are the calculated arrays of a cpu driven program, 
+there is just a continuum of output arrays for input arrays.
 '''
 verbosity = False
 precision = 1   # 0 dont balance, 1 balance light, ...9 balance fine; The finer, the more data will be discarded
@@ -229,9 +238,6 @@ def CalcPlacingcondition(DensityMap, sumBCR,sumLAK, precision, lastVariance, ind
     print("DensityMap.shape",DensityMap.shape)
 
     element = np.array([[sumBCR,sumLAK],])
-    #np.reshape(element,(2,))
-    #print(element)
-    #print("element.shape",element.shape)
     
     if index ==0:
         combinedDensityMap = element     #init first element
@@ -239,12 +245,11 @@ def CalcPlacingcondition(DensityMap, sumBCR,sumLAK, precision, lastVariance, ind
         #concatenate the BCR and LAK from the current element to the 
         combinedDensityMap = np.concatenate((DensityMap,element),axis=0)
 
-        
+    
     if precision == 0:
         placingcondition = True
         DensityMap = combinedDensityMap
         lastVariance = np.var(combinedDensityMap)
-
     else:
         if index <= 6:
             #to populate the field, just add the first 6 elements
@@ -254,7 +259,6 @@ def CalcPlacingcondition(DensityMap, sumBCR,sumLAK, precision, lastVariance, ind
             combinedVariance = np.var(combinedDensityMap)
             lastVariance =  combinedVariance
             print("populate with minimum Pop")
-
         else:
             #calculate the Variance from this turn
             combinedVariance = np.var(combinedDensityMap)
@@ -265,12 +269,11 @@ def CalcPlacingcondition(DensityMap, sumBCR,sumLAK, precision, lastVariance, ind
                 #and update the last variance for next turn with the new value
                 lastVariance =  combinedVariance
                 DensityMap = combinedDensityMap
-
             else:
                 #dont add this element to the training dataset but to the test dataset
                 placingcondition = False
 
-            #print("index:", index,"    formerVariance,combinedVariance",round(lastVariance,precision),round(combinedVariance,precision),"so placing is",placingcondition)    
+            if verbosity: print("index:", index,"    formerVariance,combinedVariance",round(lastVariance,precision),round(combinedVariance,precision),"so placing is",placingcondition)    
             #input()
 
     return placingcondition, DensityMap, lastVariance
@@ -295,7 +298,7 @@ def make_train_test_data(shape):
     test_counter =0
 
     from os import listdir
-    DataFolder = FileParentPath + "/0Data/Auswahl/"
+    DataFolder = FileParentPath + "/0Data/Images/"
     filelist = [f for f in listdir(DataFolder)]
     #print(filelist)
 
@@ -315,8 +318,7 @@ def make_train_test_data(shape):
             # Open the image
             image = Image.open(filepath)
             
-            
-            # If the picture is in RGB or other mulichannel mode 
+            # If the picture is in RGB or other multi-channel mode 
             #just seperate the channels and concatenate them from left to right
             ChannleDimension = len(str(image.mode)) # grey -> 1 chan , rgb 3 channle
             
@@ -328,16 +330,14 @@ def make_train_test_data(shape):
                 image.show()
                 print("ChannleDimension",ChannleDimension)
 
-            
             channelcodierung = []
             for channel in image.mode:
-                #FLATTEN EACH CHANNEL TO ONE  BY TILING, cause cnn have to be consistent channles
+                #FLATTEN EACH CHANNEL TO ONE  BY TILLING, cause cnn have to be consistent channles
                 #and if one rgb is in grayscale, then error
                 if verbosity: print(channel)
                 channelcodierung.append(channel)
             
             C1, C2, C3, C4, C5, C6 = None, None, None, None, None, None
-
             channellist = [C1,C2,C3,C4,C5,C6]
             croppedChannelList = channellist[0:ChannleDimension-1]
             croppedChannelList = image.split()        
@@ -358,8 +358,8 @@ def make_train_test_data(shape):
             if verbosity: print(stackedchannels.shape)
             npOutputFile = stackedchannels
 
+            
             #########################################################################
-
             # MULTITHREAD BOXCOUNT LABLE EXTRACTION
             BoxCountR_SpacialLac_map_Dict = MultithreadBoxcount(npOutputFile)
 
@@ -373,7 +373,6 @@ def make_train_test_data(shape):
             sumBCR, sumLAK = np.sum(sumBCR), np.sum(sumLAK)
             if verbosity: print("sumBCR,sumLAK after sum", sumBCR,sumLAK)
             
-                
             #Calc, if the next data in the dataset will balance it more or not
             placingcondition, DensityMap, lastVariance = CalcPlacingcondition(DensityMap, sumBCR,sumLAK,precision,lastVariance, index)
 
@@ -406,7 +405,6 @@ def make_train_test_data(shape):
                     print("Converting BCRmap,LAKmap into Chunked Form")
                     
                 for it , currentboxsize in enumerate(CuttedBoxsizeList):
-                    #Alternativly Calc it again, but would be wasteful, try just indexing
                     if verbosity: print("Iteration", it, " and currentBoxsize", currentboxsize)
                     
                     scalingFaktor = 1.0 / float(currentboxsize)
@@ -432,11 +430,8 @@ def make_train_test_data(shape):
 
                     BCRmap, LAKmap = BoxCountR_SpacialLac_map_Dict[it]
                     
-
                     chunked_BCRmap = BCRmap[Scaled_BoxBoundriesY[0]:Scaled_BoxBoundriesY[1],Scaled_BoxBoundriesX[0]:Scaled_BoxBoundriesX[1]] 
                     chunked_LAKmap = LAKmap[Scaled_BoxBoundriesY[0]:Scaled_BoxBoundriesY[1],Scaled_BoxBoundriesX[0]:Scaled_BoxBoundriesX[1]] 
-                    
-
                     
                     #SCALING----------------------------
                     #Scale the values of the Arrays in a gaussian distrubution with mean 0 and diviation 1?!?!?!
@@ -445,7 +440,6 @@ def make_train_test_data(shape):
                     '''
                     ATTENTION SCALING DEACTIVATED
                     '''
-                    
                     
                     #Normalize the Values betweeen -1...1----------------------------
                     chunked_BCRmap, chunked_LAKmap = preprocessing.normalize(chunked_BCRmap, norm='l1')  , preprocessing.normalize(chunked_LAKmap, norm='l1')  
@@ -570,82 +564,94 @@ def make_train_test_data(shape):
 
 
 
-def delete_dataset_from_last_time():
-    pass
+#If rebuild  data == True, take the chosen DataFOLDER and create a train and test Dataset 
+youwanttorebuild = input("y/N   Do you want to rebuild the machine learning dataset? \n Just has to be executed once.")
 
-REBUILD_DATA = False  # set to true to run once, then back to false unless you want to change something in your training data.
+if youwanttorebuild == "y":
+    REBUILD_DATA = True
+elif youwanttorebuild == "" or youwanttorebuild == "n" or youwanttorebuild == "N":
+    REBUILD_DATA = False  # set to true to run once, then back to false unless you want to change something in your training data.
 
-
+    
 if REBUILD_DATA == True:
-    delete_dataset_from_last_time()
+    delete_dataset_from_last_time(FileParentPath)
     make_train_test_data(shape)
-
+    
+#REBUILDING/Balancing DATA DONE ---------------------------------------------------------------------------------------------
 
 
 #REBUILDING/Balancing DATA DONE ---------------------------------------------------------------------------------------------
- Create COUSTOM Pytorch DATASET with features and labels----------------------------------------------------------------------------
-# Source: https://stackoverflow.com/questions/56774582/adding-custom-labels-to-pytorch-dataloader-dataset-does-not-work-for-custom-data
 
-from os import listdir
-from os.path import isfile, join
 
-class Dataset:
-    def __init__(self, root):
-        """Init function should not do any heavy lifting, but
-            must initialize how many items are availabel in this data set.
-        """
-        self.featurepath = root + "/features"
-        self.labelpath = root + "/labels"
 
-        self.ROOT = root
-        self.featurelist = [f for f in listdir(self.featurepath) if isfile(join(self.featurepath, f))]
-        self.labellist = [f for f in listdir(self.labelpath) if isfile(join(self.labelpath, f))]
+# Create COUSTOM Pytorch DATASET with features and labels----------------------------------------------------------------------------
+# Source: [21] https://stackoverflow.com/questions/56774582/adding-custom-labels-to-pytorch-dataloader-dataset-does-not-work-for-custom-data
+try:
 
-    def __len__(self):
-        """return number of points in our dataset"""
-        return len(self.featurelist)
+    from os import listdir
+    from os.path import isfile, join
 
-    def __getitem__(self, idx):
-        """ Here we have to return the item requested by `idx`
-            The PyTorch DataLoader class will use this method to make an iterable for
-            our training or validation loop.
-        """
-        imagepath =   self.featurepath+"/"+ "Feature" +str(idx)+".npy"
-        img = np.load(imagepath)
-        labelpath =   self.labelpath+"/"+ "label"+str(idx)
-        #Below is to read and retrieve its contents, rb-read binary
-        with open(labelpath, "rb") as f:
-            label = pickle.load(f) 
-            labels_2 = np.array(label[0])
-            labels_4 = np.array(label[1])
-            labels_8 = np.array(label[2])
-            labels_16 = np.array(label[3])
-        return img, labels_2 , labels_4 , labels_8, labels_16
+    class Dataset:
+        def __init__(self, root):
+            """Init function should not do any heavy lifting, but
+                must initialize how many items are availabel in this data set.
+            """
+            self.featurepath = root + "/features"
+            self.labelpath = root + "/labels"
 
-#And now, you can create an instance of this class as,
-trainDatasetSaveplace = FileParentPath + "/Datasets/train"
-trainDataset = Dataset(trainDatasetSaveplace)
-#Now, you can instantiate the DataLoader:
-trainDataloader = DataLoader(trainDataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu, drop_last=True)
-dataiter = iter(trainDataloader)
-trainDataset = dataiter.next()
-trainDataset  = transforms.ToTensor()
+            self.ROOT = root
+            self.featurelist = [f for f in listdir(self.featurepath) if isfile(join(self.featurepath, f))]
+            self.labellist = [f for f in listdir(self.labelpath) if isfile(join(self.labelpath, f))]
 
-#DEFINING TEST DATA LOADER FOR TESTINGs
+        def __len__(self):
+            """return number of points in our dataset"""
+            return len(self.featurelist)
 
-testDatasetSaveplace = FileParentPath + "/Datasets/test"
-testDataset = Dataset(testDatasetSaveplace)
-testDataLoader = DataLoader(testDataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu, drop_last=True )
-#This will create batches of your data that you can access as:
-testiter=  iter(testDataLoader)
-testDataset = testiter.next()
-testDataset  = transforms.ToTensor()
+        def __getitem__(self, idx):
+            """ Here we have to return the item requested by `idx`
+                The PyTorch DataLoader class will use this method to make an iterable for
+                our training or validation loop.
+            """
+            imagepath =   self.featurepath+"/"+ "Feature" +str(idx)+".npy"
+            img = np.load(imagepath)
+            labelpath =   self.labelpath+"/"+ "label"+str(idx)
+            #Below is to read and retrieve its contents, rb-read binary
+            with open(labelpath, "rb") as f:
+                label = pickle.load(f) 
+                labels_2 = np.array(label[0])
+                labels_4 = np.array(label[1])
+                labels_8 = np.array(label[2])
+                labels_16 = np.array(label[3])
+            return img, labels_2 , labels_4 , labels_8, labels_16
 
+    #And now, you can create an instance of this class as,
+    trainDatasetSaveplace = FileParentPath + "/Datasets/train"
+    trainDataset = Dataset(trainDatasetSaveplace)
+    #Now, you can instantiate the DataLoader:
+    trainDataloader = DataLoader(trainDataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu, drop_last=True)
+    dataiter = iter(trainDataloader)
+    trainDataset = dataiter.next()
+    trainDataset  = transforms.ToTensor()
+
+    #DEFINING TEST DATA LOADER FOR TESTINGs
+
+    testDatasetSaveplace = FileParentPath + "/Datasets/test"
+    testDataset = Dataset(testDatasetSaveplace)
+    testDataLoader = DataLoader(testDataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu, drop_last=True )
+    #This will create batches of your data that you can access as:
+    testiter=  iter(testDataLoader)
+    testDataset = testiter.next()
+    testDataset  = transforms.ToTensor()
+
+
+
+except:
+    PrintExeption()
+    print("Did you rebuild the train test data? Please check")
+    pass
 
 #####################################################################################################################
 #       DATA COMPLETE       ->     NOW MACHINE LEARNING PART
-
-
 
 
 
@@ -816,7 +822,7 @@ def TrainSpacialBoxcount_with(HyperparameterAndENCODERCLASS):
     else:
         Tensor = torch.FloatTensor
 
-    from tqdm import tqdm
+    #from tqdm import tqdm
 
     # ----------
     #  Training
@@ -968,11 +974,6 @@ if youwanttotrain == "" or youwanttotrain == "y" or youwanttotrain == "Y":
     for TotalTrials in range(MaxTrys):
         Modelname = "SpacialBoxcountEncoder"+"_trialsOBJ"
         run_trials(HyperparameterAndENCODERCLASS, "BoxcountEncoder")    
-
-
-
-
-
 
 
 
@@ -1138,14 +1139,6 @@ def TestSpacialBoxcount_with(Modelname, BoxCountEncoder,showitem, device):
     mean_loss = running_loss/ float(whereTObreakIteration)  # cause testing will abort after 100 batchesm has to be normalized 
 
     return mean_loss, mean_timePERbatch
-
-
-
-
-
-
-
-
 
 
 

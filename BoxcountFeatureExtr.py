@@ -14,9 +14,18 @@ def PrintException():
     line = linecache.getline(filename, lineno, f.f_globals)
     print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
+import pathlib              #Import pathlib to create a link to the directory where the file is at.
+#just has to be specified in jupyter, if executed via the terminal __file__ is been found
+__file__ = 'Spacial boxcount algorithm CPU and GPU.ipynb'    # Just use this when  __file__ is not been found
+FileParentPath = str(pathlib.Path(__file__).parent.absolute()) # Variable for path, where this file is in!
+
+
+
 
 verbosity = False   # False: no text displayed ;  True: potentially useful printouts are shown for info/bugfixing.
 
+#Numba translates Python functions to optemized machine code at runtime and results in significant speedups
+from numba import jit
 
 #If you want to compare the jit-compiler to the standard python interpreter just un/comment all @jit(... lines.
 @jit(nopython= True) # Set "nopython" mode for best performance, equivalent to @njit
@@ -33,9 +42,9 @@ def Z_boxcount(GlidingBox, boxsize,MaxValue):
         print("Boxindex",Boxindexes)
         print("counted_Boxes",counted_Boxes)
     
-    #CREATE  List of AnzPixInBox for all boxes to calc lacunarity
+    #CREATE  List of SumPixInBox for all boxes to calc lacunarity
     InitalEntry = [0.0]
-    AnzPixInBox = np.array(InitalEntry)
+    SumPixInBox = np.array(InitalEntry)
 
     #For tiny boxes it can be process Consuming
     #for every unique counted boxindex in the list of all unique boxindexes
@@ -45,7 +54,7 @@ def Z_boxcount(GlidingBox, boxsize,MaxValue):
         #the sum of the True elements represent the count of datapoints/pixel/voxel within the chosen box
         ElementsCounted = np.sum(ElementsCountedTRUTHTABLE)
         #Append the list of ElementsCounted to the list of all Elementcounted-lists to calc lacunarity later
-        AnzPixInBox = np.append(AnzPixInBox, ElementsCounted)
+        SumPixInBox = np.append(SumPixInBox, ElementsCounted)
         
         if verbosity == True:
             print("unique_BoxIndex",unique_BoxIndex)
@@ -64,10 +73,10 @@ def Z_boxcount(GlidingBox, boxsize,MaxValue):
         # if there is are no empty boxes, just pass
     else:
         EmptyBoxes = np.zeros(Num_empty_Boxes)
-        AnzPixInBox = np.append(AnzPixInBox, EmptyBoxes)
+        SumPixInBox = np.append(SumPixInBox, EmptyBoxes)
     # calcs the mean of the list of all counted datapoints/pixel/voxel within chosen boxes and then...
-    mean = np.mean(AnzPixInBox)	 # ...calcs the standard deviation of the same
-    standardDeviation = np.std(AnzPixInBox)
+    mean = np.mean(SumPixInBox)	 # ...calcs the standard deviation of the same
+    standardDeviation = np.std(SumPixInBox)
     #The lacunarity or spacial heterogenity  = (standard deviation/mean)^2 
     Lacunarity=np.power(standardDeviation/mean,2)
 
@@ -82,13 +91,13 @@ def Z_boxcount(GlidingBox, boxsize,MaxValue):
 
     return counted_Boxes, Lacunarity
 
-@jit(nopython= True) #äFalse,forceobj=True) # Set "nopython" mode for best performance, equivalent to @njit
+@jit(nopython= True) #False,forceobj=True) # Set "nopython" mode for best performance, equivalent to @njit
 def spacialBoxcount(npOutputFile, iteration,MaxValue):
     '''
     This function takes in a 2D np.array the iteration which determins the boxsize
-    and the maximum possible value to clip the value range. 8-Bit -> 256, hexadez ->16
+    and the maximum possible value to set up the value range. 8-Bit -> 256, hexadez ->16
     
-    The function returns a 2 channel-2d array containing the spacial boxcountratio and the
+    The function returns a 2 channel-2d array containing the spacial boxcount ratio and the
     spacial lacunarity scaled down in size by 1/Boxsize[iteration]
     '''
     Boxsize=[2,4,8,16,32,64,128,256,512,1024]  #All boxsizes
@@ -120,6 +129,7 @@ def spacialBoxcount(npOutputFile, iteration,MaxValue):
 
 
     while BoxBoundriesY[1]<=YRange:
+
         while BoxBoundriesX[1]<=XRange:
             #Set up Boxindex with boxsize
             indexY = int(BoxBoundriesY[0]/boxsize)
@@ -178,9 +188,6 @@ def MultithreadBoxcount(npOutputFile):
     to calculate the spacial Boxcountratios/lacunaritys for each boxsize in a own thread.
     
     '''
-
-    start = time.time()
-
     #MULTICORE APROACH
     #print("Beginn Multithread Boxcount Lacunarity feature extraction")
     BoxsizeDict={"2":0 ,"4":1,"8":2,"16":3,"32":4,"64":5,"128":6,"256":7,"512":8,"1024":9}
@@ -192,17 +199,18 @@ def MultithreadBoxcount(npOutputFile):
     BaseIteration = BoxsizeDict[str(int(BaseITERMinVal))] #without 0 there are 1 more processes 
     maxiteration =  BaseIteration +1    # to calc Lacunarity there have to be more than just one box into the z direction
     
-    #source: https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
+    #source: [17]  https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
 
     def BoxcountBoxsizeWorker(npOutputFile, iteration):
         maxvalue = 256  # cause zheight is 0...255: 8-bit grayscale picture
+        #adjust for every specific input
         BoxCountR_SpacialLac_map = spacialBoxcount(npOutputFile, iteration,maxvalue )     
         
         return BoxCountR_SpacialLac_map
 
     from threading import Thread
     
-    #Create Thread-class with ability to return a value, which is not possible in threading
+    #Create thread-class with ability to return a value, which is not possible in threading
     class ThreadWithReturnValue(Thread):
         def __init__(self, group=None, target=None, name=None,
                     args=(), kwargs={}, Verbose=None):
@@ -252,10 +260,8 @@ def MultithreadBoxcount(npOutputFile):
 
 
 
-
-
 #FUNCTION FOR ITERATING OVER A FOLDER, EXECUTING BOXCOUNTING AND DISPLAY ESULTS
-foldername = "Auswahl" # The foldername  where the machine learning dataset is based on
+foldername = "Images" # The foldername  where the images are taken from
 #foldername = "MISC"   # for saving special fotos iterate over MISC
 whereTObreakIteration = 100 #abort after 100 pictures for time testing
 
