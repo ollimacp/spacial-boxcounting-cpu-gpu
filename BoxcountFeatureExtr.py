@@ -14,18 +14,33 @@ def PrintException():
     line = linecache.getline(filename, lineno, f.f_globals)
     print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
-import pathlib              #Import pathlib to create a link to the directory where the file is at.
-#just has to be specified in jupyter, if executed via the terminal __file__ is been found
-__file__ = 'Spacial boxcount algorithm CPU and GPU.ipynb'    # Just use this when  __file__ is not been found
-FileParentPath = str(pathlib.Path(__file__).parent.absolute()) # Variable for path, where this file is in!
-
-
-
 
 verbosity = False   # False: no text displayed ;  True: potentially useful printouts are shown for info/bugfixing.
 
 #Numba translates Python functions to optemized machine code at runtime and results in significant speedups
 from numba import jit
+from PIL import Image  #Imagemanipulation via pillow image module
+import matplotlib.pyplot as plt # Python plotting libary for visualizing graphs, data and images
+import matplotlib.image as img 
+
+#Helper-function to show any np.array as a picture with a chosen title and a colormapping 
+def showNPArrayAsImage(np2ddArray, title, colormap):
+    plt.figure()                    #Init figure
+    plt.imshow(np2ddArray,          #Gererate a picture from np.array and add to figure
+            interpolation='none',
+            cmap = colormap)
+    plt.title(title)                #Add title to figure
+    plt.show(block=False)           #Show array as picture on screen, but dont block the programm to continue.
+
+
+
+'''
+class spacialBoxcounting():
+    def __init__(self):
+        super(spacialBoxcounting, self).__init__()
+        print("INIT------ENCODER----------------")
+
+'''
 
 #If you want to compare the jit-compiler to the standard python interpreter just un/comment all @jit(... lines.
 @jit(nopython= True) # Set "nopython" mode for best performance, equivalent to @njit
@@ -82,9 +97,7 @@ def Z_boxcount(GlidingBox, boxsize,MaxValue):
 
     if verbosity == True:
         print("Max_Num_Boxes",Max_Num_Boxes)
-        try:
-            print("Num_empty_Boxes",Num_empty_Boxes)
-        except: pass
+        print("Num_empty_Boxes",Num_empty_Boxes)
         print("mean",mean)
         print("standardDeviation",standardDeviation)
         print("die Lacunarity ist", Lacunarity)
@@ -260,181 +273,206 @@ def MultithreadBoxcount(npOutputFile):
 
 
 
-#FUNCTION FOR ITERATING OVER A FOLDER, EXECUTING BOXCOUNTING AND DISPLAY ESULTS
-foldername = "Images" # The foldername  where the images are taken from
-#foldername = "MISC"   # for saving special fotos iterate over MISC
-whereTObreakIteration = 100 #abort after 100 pictures for time testing
 
-from PIL import Image  #Imagemanipulation via pillow image module
-import matplotlib.pyplot as plt # Python plotting libary for visualizing graphs, data and images
-import matplotlib.image as img 
 
-def Show_Pictures(foldername):
-    savepicture = None
-    display_images = input("(Y/n) Do you want to display the processed images? Attention: Output gets big quickly and can resolve in a soft brick of the script, so beware")
+class Visualize():
+    def __init__(self):
+        #super(Encoder, self).__init__()
+        print("INIT------Visualizer----------------")
 
-    from os import listdir
-    DataFolder = FileParentPath + "/0Data/"+ foldername + "/"
-    filelist = [f for f in listdir(DataFolder)]
-    print("The specified folder for display pictures and fractal derivatives: ",DataFolder)
-    totaltime = 0.0
-    counter = 0
-    for index, filename in enumerate(filelist):
-        counter +=1
-        print("Picture",index+1,"of",whereTObreakIteration)
-        if counter == whereTObreakIteration +1:
-            break
-        else:
-            pass
+
+        #FUNCTION FOR ITERATING OVER A FOLDER, EXECUTING BOXCOUNTING AND DISPLAY ESULTS
+        self.foldername = "Images" # The foldername  where the images are taken from
+        #self.foldername = "MISC"   # for saving special fotos iterate over MISC
+        self.whereTObreakIteration = 100 #abort after 100 pictures for time testing
+
+        import pathlib              #Import pathlib to create a link to the directory where the file is at.
+
+        #just has to be specified in jupyter, if executed via the terminal __file__ is been found
+        #__file__ = 'Spacial boxcount algorithm CPU and GPU.ipynb'    # Just use this when  __file__ is not been found
+        self.FileParentPath = str(pathlib.Path(__file__).parent.absolute()) # Variable for path, where this file is in!
+        print("FileParentPath is", self.FileParentPath)
+
+        #return self
+
+
+
+
+    def Show_Pictures(self):
+
         
-        try:   
-            filepath = DataFolder+ filename 
-            print(filename)
-            #Load Image with Pillow
-            image = Image.open(filepath)
+        savepicture = None
+        display_images = input("(Y/n) Do you want to display the processed images? Attention: Output gets big quickly and can resolve in a soft brick of the script, so beware")
+
+        from os import listdir
+        DataFolder = self.FileParentPath + "/0Data/"+ self.foldername + "/"
+        filelist = [f for f in listdir(DataFolder)]
+        print("The specified folder for display pictures and fractal derivatives: ",DataFolder)
+        totaltime = 0.0
+        counter = 0
+        for index, filename in enumerate(filelist):
+            counter +=1
+            print("Picture",index+1,"of",self.whereTObreakIteration)
+            if counter == self.whereTObreakIteration +1:
+                break
+            else:
+                pass
             
-            #Cause rgb has 3 channels, the channels are flattend to 1 channel by concatenating the channels side by side
-            ChannleDimension = len(str(image.mode)) # grey -> 1 chan , rgb 3 channle
-            
-            if verbosity == True:
-                # summarize some details about the image
-                print(image.format,image.size)
-                print(image.mode)
-                # show the image
-                #image.show()
-                print("Incoming image has",ChannleDimension, "channels")
-            '''
-            channelcodierung = []
-            for channel in image.mode:
-                #FLATTEN EACH CHANNEL TO ONE  BY TILING, cause cnn have to be consistent channles
-                channelcodierung.append(channel)
+            try:   
+                filepath = DataFolder+ filename 
+                print(filename)
+                #Load Image with Pillow
+                image = Image.open(filepath)
                 
+                #Cause rgb has 3 channels, the channels are flattend to 1 channel by concatenating the channels side by side
+                ChannleDimension = len(str(image.mode)) # grey -> 1 chan , rgb 3 channle
                 
-            if verbosity: print(channelcodierung)  
-            '''
-            #init possible channels
-            C1, C2, C3, C4, C5, C6 = None, None, None, None, None, None 
-            channellist = [C1,C2,C3,C4,C5,C6]
-            #Cropp channellist to actual used channels
-            croppedChannelList = channellist[0:ChannleDimension-1]
-            #slit channels to variables C1...C6
-            
-            
-            croppedChannelList = image.split()        
-            #Stacking channels from left to right
-            initEntry = None
-            stackedchannels = np.array(initEntry)
-            #stackedchannels = None
-            for index, channel in enumerate(croppedChannelList):
-                PicNumpy = np.array(channel)
                 if verbosity == True:
-                    channel.show()  
-                    print(channel)
-                    print(PicNumpy)
-                    print(PicNumpy.shape)
-
-                if index == 0:
-                    stackedchannels = PicNumpy
-                else:
-                    stackedchannels = np.concatenate((stackedchannels,PicNumpy),axis=1)
-
-            if verbosity == True:
-                print(stackedchannels)
-                print(stackedchannels.shape)
+                    # summarize some details about the image
+                    print(image.format,image.size)
+                    print(image.mode)
+                    # show the image
+                    #image.show()
+                    print("Incoming image has",ChannleDimension, "channels")
+                '''
+                channelcodierung = []
+                for channel in image.mode:
+                    #FLATTEN EACH CHANNEL TO ONE  BY TILING, cause cnn have to be consistent channles
+                    channelcodierung.append(channel)
+                    
+                    
+                if verbosity: print(channelcodierung)  
+                '''
+                #init possible channels
+                C1, C2, C3, C4, C5, C6 = None, None, None, None, None, None 
+                channellist = [C1,C2,C3,C4,C5,C6]
+                #Cropp channellist to actual used channels
+                croppedChannelList = channellist[0:ChannleDimension-1]
+                #slit channels to variables C1...C6
                 
-            npOutputFile = stackedchannels
+                
+                croppedChannelList = image.split()        
+                #Stacking channels from left to right
+                initEntry = None
+                stackedchannels = np.array(initEntry)
+                #stackedchannels = None
+                for index, channel in enumerate(croppedChannelList):
+                    PicNumpy = np.array(channel)
+                    if verbosity == True:
+                        channel.show()  
+                        print(channel)
+                        print(PicNumpy)
+                        print(PicNumpy.shape)
+
+                    if index == 0:
+                        stackedchannels = PicNumpy
+                    else:
+                        stackedchannels = np.concatenate((stackedchannels,PicNumpy),axis=1)
+
+                if verbosity == True:
+                    print(stackedchannels)
+                    print(stackedchannels.shape)
+                    
+                npOutputFile = stackedchannels
 
 
+                
+                # MULTITHREAD BOXCOUNT Execution
+
+                start = time.time()   #start time here for just to compare boxcount performance, everything before is preprocessing 
+                                    # and gpu-version also has preprocessing steps
+                BoxCountR_SpacialLac_map_Dict = MultithreadBoxcount(npOutputFile)
             
-            # MULTITHREAD BOXCOUNT Execution
+                end = time.time()
+                
+                timethisround = end-start
+                totaltime += timethisround
+                
 
-            start = time.time()   #start time here for just to compare boxcount performance, everything before is preprocessing 
-                                  # and gpu-version also has preprocessing steps
-            BoxCountR_SpacialLac_map_Dict = MultithreadBoxcount(npOutputFile)
+                BCRmap2 , Lakmap2 = BoxCountR_SpacialLac_map_Dict[0]
+                BCRmap4 , Lakmap4 = BoxCountR_SpacialLac_map_Dict[1]
+                BCRmap8, Lakmap8 = BoxCountR_SpacialLac_map_Dict[2]
+                BCRmap16 , Lakmap16 = BoxCountR_SpacialLac_map_Dict[3]
+
+                if display_images == "" or display_images == "y":
+
+                    showNPArrayAsImage(npOutputFile, "Original Picture", "gray")
+
+                    #source: https://stackoverflow.com/questions/22053274/grid-of-images-in-matplotlib-with-no-padding
+
+                    max_cols = 2
+                    fig, axes = plt.subplots(nrows=4, ncols=max_cols, figsize=(10,16))
+                    #lablelist = [labels_2[idx,0,:,:], labels_2[idx,1,:,:], labels_4[idx,0,:,:], labels_4[idx,1,:,:], labels_8[idx,0,:,:], labels_8[idx,1,:,:], labels_16[idx,0,:,:],  labels_16[idx,1,:,:], NumpyencImg2[idx,0,:,:], NumpyencImg2[idx,1,:,:], NumpyencImg4[idx,0,:,:], NumpyencImg4[idx,1,:,:], NumpyencImg8[idx,0,:,:], NumpyencImg8[idx,1,:,:], NumpyencImg16[idx,0,:,:]  , NumpyencImg16[idx,1,:,:]]
+                    lablelist = [BCRmap2, Lakmap2,BCRmap4 , Lakmap4,BCRmap8, Lakmap8,  BCRmap16 , Lakmap16 ]
+
+                    titlelist = ["BCR2", "LAC2", "BCR4", "LAC4", "BCR8", "LAC8","BCR16", "LAC16"]  #, "NN BCR2", "NN LAC2",   ]
+                    #ylabellist = ["CPU", "", "","", "", "", "","", "GPU", "","","","", "", "",""]
+                    #xlabellist = ["BCR2" ,"LAC2" ,"BCR4" ,"LAC4" ,"BCR8" ,"LAC8" ,"BCR16" ,"LAC16" ]
+                    for idx, image in enumerate(lablelist):
+                        row = idx // max_cols
+                        col = idx % max_cols
+                        #axes[row, col].axis("off")
+                        axes[row,col].imshow(image, cmap="gray", aspect="auto")
+                        axes[row, col].set_title(titlelist[idx])
+                        # label x-axis and y-axis 
+                        #axes[row, col].set_ylabel(ylabellist[idx]) 
+                        #axes[row, col].set_xlabel(ylabellist[idx]) 
+
+                    plt.subplots_adjust(wspace=.1, hspace=.2)
+                
+                if self.foldername == "MISC":
+                    if savepicture == None:
+                        savepicture = input("do you want to save pictures in the folder MISC into generated images? \n (Y/y) or not (n) or NEVER for just diplay output (N)")
+
+                    if savepicture == None or savepicture == "y" or savepicture == "Y" or savepicture == "":
+                        saveplace = self.FileParentPath + "/0Data/generated_imgs/"+filename[:-3] +"png"
+                        print("saveplace is", saveplace)
+                        plt.savefig(saveplace , bbox_inches='tight')
+                        continue
+
+                    elif savepicture == "N":
+                        pass
+
+                    else:
+                        savepicture = None
+                        pass
+
+
+                plt.show()
+                                
+                '''
+                #Diffrent kind of displaying images
+
+                showNPArrayAsImage(BCRmap2, "BCRmap2", "gray")
+                showNPArrayAsImage(Lakmap2, "Lakmap2", "gray")
+
+                showNPArrayAsImage(BCRmap4, "BCRmap4", "gray")
+                showNPArrayAsImage(Lakmap4, "Lakmap4", "gray")
+
+                showNPAr21rayAsImage(BCRmap8, "BCRmap8", "gray")
+                showNPArrayAsImage(Lakmap8, "Lakmap8", "gray")
+
+                showNPArrayAsImage(BCRmap16, "BCRmap16", "gray")
+                showNPArrayAsImage(Lakmap16, "Lakmap16", "gray")
+                input()
+                '''
+                
+            except :
+                PrintException()
+                print("Exception hit while showing pictures, assume abort, so break loop and continue with the script")
+                input()
+                break    
         
-            end = time.time()
-            
-            timethisround = end-start
-            totaltime += timethisround
-            
+        #CALC time metrics to compare with gpu-Version
+        mean_timePERbatch = totaltime / float(self.whereTObreakIteration)
+        MegapixelPERsecond =  round( (1.0 * float(npOutputFile.shape[0]) * float(npOutputFile.shape[1])) /(mean_timePERbatch* 1000000 ) ,2)
+        #print("compiler", compiler)
+        print("CPU python code"," with", mean_timePERbatch, " seconds/Picture with a pixelthroughput of",MegapixelPERsecond )
+        
 
-            BCRmap2 , Lakmap2 = BoxCountR_SpacialLac_map_Dict[0]
-            BCRmap4 , Lakmap4 = BoxCountR_SpacialLac_map_Dict[1]
-            BCRmap8, Lakmap8 = BoxCountR_SpacialLac_map_Dict[2]
-            BCRmap16 , Lakmap16 = BoxCountR_SpacialLac_map_Dict[3]
-
-            if display_images == "" or display_images == "y":
-
-                showNPArrayAsImage(npOutputFile, "Original Picture", "gray")
-
-                #source: https://stackoverflow.com/questions/22053274/grid-of-images-in-matplotlib-with-no-padding
-
-                max_cols = 2
-                fig, axes = plt.subplots(nrows=4, ncols=max_cols, figsize=(10,16))
-                #lablelist = [labels_2[idx,0,:,:], labels_2[idx,1,:,:], labels_4[idx,0,:,:], labels_4[idx,1,:,:], labels_8[idx,0,:,:], labels_8[idx,1,:,:], labels_16[idx,0,:,:],  labels_16[idx,1,:,:], NumpyencImg2[idx,0,:,:], NumpyencImg2[idx,1,:,:], NumpyencImg4[idx,0,:,:], NumpyencImg4[idx,1,:,:], NumpyencImg8[idx,0,:,:], NumpyencImg8[idx,1,:,:], NumpyencImg16[idx,0,:,:]  , NumpyencImg16[idx,1,:,:]]
-                lablelist = [BCRmap2, Lakmap2,BCRmap4 , Lakmap4,BCRmap8, Lakmap8,  BCRmap16 , Lakmap16 ]
-
-                titlelist = ["BCR2", "LAC2", "BCR4", "LAC4", "BCR8", "LAC8","BCR16", "LAC16"]  #, "NN BCR2", "NN LAC2",   ]
-                #ylabellist = ["CPU", "", "","", "", "", "","", "GPU", "","","","", "", "",""]
-                #xlabellist = ["BCR2" ,"LAC2" ,"BCR4" ,"LAC4" ,"BCR8" ,"LAC8" ,"BCR16" ,"LAC16" ]
-                for idx, image in enumerate(lablelist):
-                    row = idx // max_cols
-                    col = idx % max_cols
-                    #axes[row, col].axis("off")
-                    axes[row,col].imshow(image, cmap="gray", aspect="auto")
-                    axes[row, col].set_title(titlelist[idx])
-                    # label x-axis and y-axis 
-                    #axes[row, col].set_ylabel(ylabellist[idx]) 
-                    #axes[row, col].set_xlabel(ylabellist[idx]) 
-
-                plt.subplots_adjust(wspace=.1, hspace=.2)
-            
-            if foldername == "MISC":
-                if savepicture == None:
-                    savepicture = input("do you want to save pictures in the folder MISC into generated images? \n (Y/y) or not (n) or NEVER for just diplay output (N)")
-
-                if savepicture == None or savepicture == "y" or savepicture == "Y" or savepicture == "":
-                    saveplace = FileParentPath + "/0Data/generated_imgs/"+filename[:-3] +"png"
-                    print("saveplace is", saveplace)
-                    plt.savefig(saveplace , bbox_inches='tight')
-                    continue
-
-                elif savepicture == "N":
-                    pass
-
-                else:
-                    savepicture = None
-                    pass
-
-
-            plt.show()
-                            
-            '''
-            #Diffrent kind of displaying images
-
-            showNPArrayAsImage(BCRmap2, "BCRmap2", "gray")
-            showNPArrayAsImage(Lakmap2, "Lakmap2", "gray")
-
-            showNPArrayAsImage(BCRmap4, "BCRmap4", "gray")
-            showNPArrayAsImage(Lakmap4, "Lakmap4", "gray")
-
-            showNPAr21rayAsImage(BCRmap8, "BCRmap8", "gray")
-            showNPArrayAsImage(Lakmap8, "Lakmap8", "gray")
-
-            showNPArrayAsImage(BCRmap16, "BCRmap16", "gray")
-            showNPArrayAsImage(Lakmap16, "Lakmap16", "gray")
-            input()
-            '''
-            
-        except :
-            PrintException()
-            print("Exception hit while showing pictures, assume abort, so break loop and continue with the script")
-            input()
-            break    
-    
-    #CALC time metrics to compare with gpu-Version
-    mean_timePERbatch = totaltime / float(whereTObreakIteration)
-    MegapixelPERsecond =  round( (1.0 * float(npOutputFile.shape[0]) * float(npOutputFile.shape[1])) /(mean_timePERbatch* 1000000 ) ,2)
-    #print("compiler", compiler)
-    print("CPU python code"," with", mean_timePERbatch, " seconds/Picture with a pixelthroughput of",MegapixelPERsecond )
-    
+'''
+if __name__ == "__main__":
+    #s = spacialBoxcounting() # init
+    v = Visualize() #init
+    v.Show_Pictures()
+'''
