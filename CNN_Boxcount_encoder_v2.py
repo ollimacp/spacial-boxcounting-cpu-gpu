@@ -1,41 +1,6 @@
 
 
 
-
-#BOXCOUNT INIT
-Boxsize=[2,4,8,16,32,64,128]    #,256,512,1024]
-iteration = 0
-#os.makedirs("images", exist_ok=True)
-
-import os
-#os.makedirs("images", exist_ok=True)
-import numpy as np
-import argparse
-import BoxcountFeatureExtr
-
-#what_do_you_want = input("Which function should be performed? 1: Rebuild data, 2: Train model, 3: Validate  ")
-
-
-'''
-# Create a option object to store all variables
-class OptionObject:
-  def __init__(self, n_epochs, batch_size, img_size, channels, learning_rate, b1, b2 ):
-    self.n_epochs = n_epochs
-    self.batch_size = batch_size
-    self.img_size = img_size
-    self.lr = learning_rate
-    self.b1 = b1   #first order momentum of gradient decay
-    self.b2 = b2   #second order momentum of gradient decay
-    self.channels = channels
-    self.n_cpu = 8
-    
-#self, n_epochs, batch_size, img_size, channels, learning_rate, b1, b2
-opt = OptionObject(100, 32, opt.img_size, 1 , 0.00002, 0.5, 0.8)
-img_shape = (opt.channels, opt.img_size, opt.img_size)
-'''
-
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=16, help="size of the batches")
@@ -52,21 +17,30 @@ print(opt)
 
 
 
+import os
+#os.makedirs("images", exist_ok=True)
+import numpy as np
+import argparse
+import BoxcountFeatureExtr
+
+#BOXCOUNT INIT
+Boxsize=[2,4,8,16,32,64,128]    #,256,512,1024]
+iteration = 0
+
+
 maxIndexY = opt.img_size
 maxIndexX = opt.img_size
 
 import platform
 Operating_system = platform.system()
 print(Operating_system)
+
 if Operating_system == 'Windows':
     print("Windows detected, dataloader multiprocessing not avaiable. Set n_cpu to 0 ")
     opt.n_cpu = 0
 
-#print("Manual set to opt.n_cpu=4")
-#opt.n_cpu = 4
 
 img_shape = (opt.channels, opt.img_size, opt.img_size)
-
 shape = (opt.img_size, opt.img_size )
 
 
@@ -95,7 +69,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 #from torch.utils.data.sampler import SubsetRandomSampler
 
-
+# Import auxiliary Modules
 import pickle
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -106,8 +80,6 @@ import time
 import BoxcountFeatureExtr
 import sklearn.preprocessing as preprocessing
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials  #hyperoptimization libary
-
-#import itertools
 from PIL import Image
 from os import listdir
 
@@ -115,7 +87,6 @@ from os import listdir
 import pathlib              #Import pathlib to create a link to the directory where the file is at.
 FileParentPath = str(pathlib.Path(__file__).parent.absolute())
 saveplace = FileParentPath + "/Datasets/"
-
 
 #Helper-function to show any np.array as a picture with a chosen title and a colormapping 
 def showNPArrayAsImage(np2ddArray, title, colormap):
@@ -125,9 +96,6 @@ def showNPArrayAsImage(np2ddArray, title, colormap):
             cmap = colormap)
     plt.title(title)                #Add title to figure
     plt.show(block=False)           #Show array as picture on screen, but dont block the programm to continue.
-
-
-
 
 
 
@@ -165,9 +133,7 @@ def reshape_Data(PicNumPy,shape, original_shape):
 #just functions via jupyter notebook with !command
 def delete_dataset_from_last_time(FileParentPath):
     import shutil
-
     really = input("-->(y/n):  Do you want to delete the old Dataset? \n BE CARFUL: function can remove whole directorys, so dont change the Fileparentpath")
-    
     
     if really =="y":
         OldDatasetSaveplace = FileParentPath+"/Datasets/test/"
@@ -223,8 +189,6 @@ print("Chosen Devide is",device)
 
 
 
-
-
 class BoxCountEncoder(nn.Module):
     def __init__(self,Parameter):
         super(BoxCountEncoder, self).__init__()
@@ -237,8 +201,6 @@ class BoxCountEncoder(nn.Module):
         if opt.verbosity == True:
             print("self.OutputLayerIndexList", self.OutputLayerIndexList)
 
-        #Throughput=[]   #list of layercount for Batchnormlayer
-        #ATTENTION  ENHANCER BUILDS NETWORK BACKWARDS AND IN AND OUT ARE ALSO SWITCHED
         for i in range(self.LayerCount):        #iterate forwards
             IN,OUT,Kx, Ky,Sx,Sy,Px,Py,BN = self.LayerDiscription[i]
             if opt.verbosity: print("Layer",i," with Parameters", IN,OUT,Kx, Ky,Sx,Sy,Px,Py,BN)
@@ -266,7 +228,6 @@ class BoxCountEncoder(nn.Module):
 
 
     def forward(self, x):
-
         output2, output4, output8, output16 = None, None, None, None
         OutputList = [output2, output4, output8, output16]
         outputindex = 0
@@ -290,10 +251,6 @@ class BoxCountEncoder(nn.Module):
 
 
 
-
-
-
-
 print("Imports and helper functions defined")
 
 
@@ -306,7 +263,7 @@ Binary classes can be balanced just by taking 50/50 balance for the training dat
 Cause the lables are the calculated arrays of a cpu driven program, 
 there is just a continuum of output arrays for input arrays.
 '''
-opt.verbosity = False
+#opt.verbosity = False
 precision = 1   # 0 dont balance, 1 balance light, ...9 balance fine; The finer, the more data will be discarded
 
 
@@ -498,8 +455,6 @@ class CNN_BC_enc():
                 break
             
 
-            
-
         ### SAVE MODEL IF its better than 0something
         if previous_Best_Loss == None:
             previous_Best_Loss = BCR_LAK_loss.item()
@@ -547,16 +502,16 @@ class CNN_BC_enc():
             #ATTENTION: If you want to begin training anew, then you have to delete the .hyperopt file
             TrialsSaveplace = FileParentPath
             TrialsSaveplace +=  "/"+ str(Modelname) +".hyperopt" 
-            trials_step = 1  # how many additional trials to do after loading saved trials. 1 = save after iteration
-            max_trials = 3  # initial max_trials. put something small to not have to wait
+            trials_step = 1     # how many additional trials to do after loading saved trials. 1 = save after iteration
+            max_trials = 3      # initial max_trials. put something small to not have to wait
 
             
-            try:  # try to load an already saved trials object, and increase the max
+            try:                # try to load an already saved trials object, and increase the max
                 trials = pickle.load(open(TrialsSaveplace, "rb"))
                 print("Found saved Trials! Loading...")
                 max_trials = len(trials.trials) + trials_step
                 print("Rerunning from {} trials to {} (+{}) trials".format(len(trials.trials), max_trials, trials_step))
-            except:  # create a new trials object and start searching
+            except:             # create a new trials object and start searching
                 trials = Trials()
 
             
@@ -568,7 +523,6 @@ class CNN_BC_enc():
             with open(TrialsSaveplace, "wb") as f:
                 pickle.dump(trials, f)
 
-        #old batchsize list  [2,4,8,16,32,64,128,256,512]
 
         HyperParameterspace = {
             'n_epochs':hp.choice('opt.n_epochs', range(5,150,5) ),
@@ -579,10 +533,6 @@ class CNN_BC_enc():
             'Inter1':hp.choice('Inter1', range(1,512) ),
             'Inter2':hp.choice('Inter2', range(1,512) ),
             'Inter3':hp.choice('Inter3', range(1,512) ),
-            #'Scalefactor_2':hp.uniform('Scalefactor_2', 0.4, 0.5 ),   
-            #'Scalefactor_4':hp.uniform('Scalefactor_4', 0.15, 0.25 ),
-            #'Scalefactor_8':hp.uniform('Scalefactor_8', 0.1, 0.15 ),
-
         }     
 
         HyperparameterAndENCODERCLASS = HyperParameterspace, BoxCountEncoder,previous_Best_Loss
@@ -623,7 +573,6 @@ class CNN_BC_enc():
         opt.n_cpu = 8 #for every thread of my quadcore -> adjust as you like
 
         def TestSpacialBoxcount_with(Modelname, BoxCountEncoder,showitem, device):
-            #global showitem
             NetParametersSaveplace =FileParentPath+ "/models/"+ "SpacialBoxcountModels/"+ Modelname +".netparams"
             BoxCountNetParameters = pickle.load(open(NetParametersSaveplace, "rb"))
 
@@ -636,8 +585,6 @@ class CNN_BC_enc():
             #should not be nessecary, except the changing batchsize #self, n_epochs, batch_size, img_size, channels, learning_rate, b1, b2
             #opt = OptionObject(int(n_epochs), int(batch_size), opt.img_size, 1 , float(learning_rate), float(betadecay1), float(betadecay2))
             
-            #device = "cuda"
-            #device = "cpu"
             
             #load and init the BCencoder
             BoxCountEncoder = BoxCountEncoder(BoxCountNetParameters)
@@ -666,7 +613,6 @@ class CNN_BC_enc():
             totaltime = 0.0
             running_loss = 0.0
             
-            
             #Begin testing by evaluating the test data set
             for  i, (images, labels_2, labels_4, labels_8, labels_16 )  in enumerate(testDataLoader):
                 if i== whereTObreakIteration:
@@ -674,7 +620,6 @@ class CNN_BC_enc():
                     break
                     
                 start = time.time()
-                
                 torch.no_grad() # for testing no gradients have to be computed
                 # Configure input/ouput variables and send it to device
                 real_imgs = Variable(images.type(Tensor))
@@ -701,9 +646,8 @@ class CNN_BC_enc():
                 NumpyencImg8 =  BCR_LAK_map_8.cpu().detach().numpy()
                 NumpyencImg16 =  BCR_LAK_map_16.cpu().detach().numpy()
 
-                if opt.verbosity:
+                if opt.verbosity == True:
                     #Render Pictures 
-                    
                     for idx in range(opt.batch_size):
                         print("index within batch:", idx)
                         #CreateSubplotWith(idx, images, labels_2, labels_4, labels_8, labels_16,NumpyencImg2, NumpyencImg4, NumpyencImg8, NumpyencImg16)
@@ -945,25 +889,6 @@ class CNN_BC_enc():
 
 
     #TrainBoxcountEncoder = False
-
-
-
-
-    '''
-    https://stackoverflow.com/questions/58296345/convert-3d-tensor-to-4d-tensor-in-pytorch
-    x = torch.zeros((4,4,4))   # Create 3D tensor 
-    print(x[None].shape)       #  (1,4,4,4)
-    print(x[:,None,:,:].shape) #  (4,1,4,4)
-    print(x[:,:,None,:].shape) #  (4,4,1,4)
-    print(x[:,:,:,None].shape) #  (4,4,4,1)
-
-    train_data = train_data[:,None,:,:]
-    test_data = test_data[:,None,:,:]
-
-    print("train_data.shape", train_data.shape,"test_data.shape", test_data.shape)
-
-
-    '''
 
 
 
