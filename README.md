@@ -2,6 +2,9 @@
 ### Example Dataset location: <https://drive.google.com/file/d/1sLc8Uk61W_4TTtmRk4x6_5cOiWq7IeOT/view?usp=sharing>
 Ole Peters
     
+### PLEASE OPEN THE JUPYTER NOTEBOOK TO READ THE FULL ARTICLE
+### https://colab.research.google.com/github/ollimacp/spacial-boxcounting-cpu-gpu/blob/main/Spacial%20boxcount%20algorithm%20CPU%20and%20GPU.ipynb
+    
 ## 1 Abstract
 
 This paper contains the postulation of a spacial boxcount algorithm, which characterizes any incoming 2D array spacially by indicators for topological complexity and spacial heterogenity at different scales. This characterization allows spacial similarity search or sorting capability, edge detection with userspecified scaling and statistical analysis of input datasets. The algorithm can handle any kind of data able to be represented in a 2 dimensional array. 
