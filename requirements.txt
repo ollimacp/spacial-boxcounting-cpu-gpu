@@ -1,0 +1,7 @@
+numba
+numpy
+pandas
+matplotlib
+pillow
+hilbertcurve
+cupy-cuda12x
