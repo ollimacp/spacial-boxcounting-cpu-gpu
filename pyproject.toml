@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spacial_boxcounting"
+version = "0.1.0"
+description = "Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+maintainers = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = [
+    "fractal-analysis",
+    "box-counting",
+    "image-processing",
+    "spatial-analysis",
+    "gpu-acceleration"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Mathematics"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+    "numba>=0.53.0",
+    "Pillow>=8.0.0",
+    "matplotlib>=3.3.0",
+    "hilbertcurve>=1.0.0",
+    "pandas>=1.3.0"
+]
+
+[project.optional-dependencies]
+gpu = [
+    "cupy-cuda12x>=9.0.0"
+]
+dev = [
+    "pytest>=6.0.0",
+    "sphinx>=4.0.0",
+    "bandit>=1.7.0",
+    "safety>=3.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
+Repository = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
+Documentation = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu#readme"
+"Bug Reports" = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu/issues"
+"Source Code" = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
+
+[project.scripts]
+spacial-boxcount = "spacial_boxcounting.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["spacial_boxcounting*"]
+exclude = ["tests*", "deprecated*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+
+[tool.bandit]
+exclude_dirs = [".git", ".venv", "venv", "build", "dist"]
