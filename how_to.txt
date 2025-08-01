@@ -1,0 +1,13 @@
+Opencode Usage Guide
+
+1. Be concise and specific in your prompts. Provide exact file paths and clear, direct instructions for tasks.
+
+2. Include necessary context such as directory structure or task details when asking for changes or analysis.
+
+3. Use the CLI to interact with features like file edits, code searches, and testing. Refer to file names and line numbers when discussing code.
+
+4. Fundamental commands include LS, READ, and Bash commands for executing tasks. Always specify file paths accurately.
+
+5. For task management, adopt a clear, step-by-step approach and update task statuses promptly.
+
+This guide does not reveal internal processing details. It focuses on how to effectively collaborate with Opencode to create and modify software.

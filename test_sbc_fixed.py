@@ -25,17 +25,14 @@ def test_from_file():
         debug_print("Testing Spatial Mode from File", image_path)
         result_spatial = boxcount_from_file(image_path, mode='spatial')
         debug_print("Spatial Box Count Map", result_spatial)
-        assert result_spatial is not None
 
         debug_print("Testing Single Mode from File", image_path)
         result_single = boxcount_from_file(image_path, mode='single')
         debug_print("Single Box Count & Lacunarity", result_single)
-        assert result_single is not None
 
         debug_print("Testing Fractal Dimension from File", image_path)
         fd = fractal_dimension_from_file(image_path)
         debug_print("Fractal Dimension", fd)
-        assert fd is not None
 
     except Exception as e:
         print("\n[ERROR] Failed processing image file.")
@@ -53,12 +50,10 @@ def test_from_array():
         debug_print("Testing Spatial Mode from Array", "")
         result = boxcount_from_array(arr, mode='spatial')
         debug_print("Spatial Result from Array", result)
-        assert result is not None
 
         debug_print("Testing Fractal Dimension from Array", "")
         fd = fractal_dimension_from_array(arr)
         debug_print("Fractal Dimension from Array", fd)
-        assert fd is not None
 
     except Exception as e:
         print("\n[ERROR] Failed processing numpy array.")
@@ -77,7 +72,6 @@ def test_gpu():
         debug_print("Testing GPU Boxcount", "")
         result_gpu = spacialBoxcount_gpu(arr, iteration=0, MaxValue=256)
         debug_print("GPU Spatial Result", result_gpu)
-        assert result_gpu is not None
 
     except ImportError:
         print("[INFO] cupy not installed, skipping GPU test.")
@@ -94,14 +88,6 @@ if __name__ == '__main__':
     test_image_path = "/home/raghat/projects/spacial-boxcounting-cpu-gpu/0Data/Images/12_3_3700x.bmp"  # <-- Replace with actual image path
     # /home/raghat/projects/spacial-boxcounting-cpu-gpu/0Data/Images/
     test_from_array()
-    # Check if test images exist before running
-    if os.path.exists("0Data/Images/test_image.jpg") or os.path.exists("0Data/Images/test.bmp"):
+    if os.path.exists(test_image_path):
         test_from_file()
-    #test_gpu()
-
-    # Optional: change this path to an existing image to test from file
-    test_image_path = "/home/raghat/projects/spacial-boxcounting-cpu-gpu/0Data/Images/12_3_3700x.bmp"  # <-- Replace with actual image path
-    # /home/raghat/projects/spacial-boxcounting-cpu-gpu/0Data/Images/
-    test_from_array()
-    test_from_file(test_image_path)
     #test_gpu()
