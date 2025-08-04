@@ -17,7 +17,7 @@ Ensure that all dependencies (numpy, numba, Pillow, matplotlib, hilbertcurve, cu
 ### Processing a Single File
 
 ```python
-from spacial_boxcounting.api import boxcount_from_file, fractal_dimension
+from spacial_boxcounting.api import boxcount_from_file, fractal_dimension_from_file
 
 # For obtaining spatial box count maps:
 result_spatial = boxcount_from_file('path/to/your/image.jpg', mode='spatial')
@@ -28,78 +28,78 @@ result_single = boxcount_from_file('path/to/your/image.jpg', mode='single')
 print('Box Count & Lacunarity:', result_single)
 
 # Estimating fractal dimension:
-fd = fractal_dimension('path/to/your/image.jpg')
+fd = fractal_dimension_from_file('path/to/your/image.jpg')
 print('Fractal Dimension:', fd)
 ```
 
-### Processing Directly from a Numpy Array
+### Processing from Numpy Arrays
 
 ```python
 import numpy as np
-from spacial_boxcounting.api import boxcount_from_array
+from spacial_boxcounting.api import boxcount_from_array, fractal_dimension_from_array
 
-# Create or load a 2D numpy array (example random array):
+# Create sample data
 arr = np.random.randint(0, 256, size=(256, 256)).astype(np.uint8)
-result = boxcount_from_array(arr, mode='spatial')
-print('Spatial Result from Array:', result)
-```
 
-### Fractal Dimension from Arrays and Files
+# Get spatial results
+spatial_result = boxcount_from_array(arr, mode='spatial')
+print('Spatial result shape:', [r.shape for r in spatial_result])
 
-You can compute the fractal dimension either from a 2D numpy array or directly from an image file.
+# Get single value results  
+single_result = boxcount_from_array(arr, mode='single')
+print('Single result:', single_result)
 
-#### From a Numpy Array
-
-```python
-from spacial_boxcounting.api import fractal_dimension_from_array
-
-# Create or load a 2D numpy array
-arr = np.random.randint(0, 256, size=(256, 256)).astype(np.uint8)
+# Compute fractal dimension
 fd = fractal_dimension_from_array(arr)
-print('Fractal Dimension (Array):', fd)
+print('Fractal dimension:', fd)
 ```
 
-#### From an Image File
+## Command Line Usage
+
+The package includes a command-line interface for processing files directly:
+
+```bash
+# Process single file
+spacial-boxcount single --file input.jpg --mode spatial
+
+# Process directory of files
+spacial-boxcount batch --folder images/ --mode single
+
+# Process with Hilbert curve mapping (for binary files)
+spacial-boxcount single --file binary_data.bin --mode spatial --hilbert
+```
+
+## Hilbert Curve Mapping for Binary Data
+
+For binary files where there's no natural 2D structure, the Hilbert curve preserves sequential locality:
 
 ```python
-from spacial_boxcounting.api import fractal_dimension_from_file
-
-fd = fractal_dimension_from_file('path/to/your/image.jpg')
-print('Fractal Dimension (File):', fd)
+# Process binary file with Hilbert curve mapping
+result = boxcount_from_file('data.bin', mode='spatial', hilbert=True)
+fd = fractal_dimension_from_file('data.bin', hilbert=True)
 ```
 
-Optional parameters include:
+## GPU Acceleration
 
-* `maxvalue`: maximum pixel value (default is 256)
-* `box_sizes`: list of box sizes to use for box counting (default is powers of 2)
-* `hilbert`: whether to apply a Hilbert curve transformation (for file-based function)
+If CuPy is installed with CUDA support, GPU acceleration is available:
+
+```python
+from spacial_boxcounting.core import spacialBoxcount_gpu
+import numpy as np
+
+arr = np.random.randint(0, 256, size=(512, 512)).astype(np.uint8)
+result = spacialBoxcount_gpu(arr, iteration=2, MaxValue=256)  # box size 8
+```
 
 ## Batch Processing
 
-Use the provided CLI for processing all files in a directory:
-
-```bash
-python3 -m spacial_boxcounting.batch path/to/your/input_folder
-```
-
-## Using GPU Acceleration (if available)
-
-The package can utilize Cupy for GPU-accelerated operations. If cupy is installed, GPU functions such as `spacialBoxcount_gpu` and `Z_boxcount_gpu` will execute on the GPU:
+Process multiple files with progress tracking:
 
 ```python
-import numpy as np
-from spacial_boxcounting.core import spacialBoxcount_gpu, Z_boxcount_gpu
+from spacial_boxcounting.batch import batch_boxcount
 
-# Create a random array:
-arr = np.random.randint(0, 256, size=(64, 64)).astype(np.uint8)
-result_gpu = spacialBoxcount_gpu(arr, iteration=0, MaxValue=256)
-print('GPU spatial result:', result_gpu)
-```
-
-## Testing
-
-Run unit tests:
-
-```bash
-pytest
+# Process all images in directory
+results = batch_boxcount('path/to/images/', mode='single')
+for filename, result in results.items():
+    print(f'{filename}: {result}')
 ```

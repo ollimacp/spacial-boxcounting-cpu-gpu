@@ -22,7 +22,7 @@ def hilbert_curve_transform(arr):
     total_points = 2**(2*p)
     # Get Hilbert indices and sort points accordingly
     # Build mapping from index to position
-    points = [hilbert.coordinates_from_distance(i) for i in range(total_points)]
+    points = hilbert.points_from_distances(range(total_points))
     # Retain only as many points as data length
     points = points[:n]
 

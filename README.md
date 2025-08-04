@@ -2,10 +2,6 @@
 
 An implementation of a spatial boxcount algorithm for fractal analysis, with both CPU and GPU support for accelerated computation.
 
-[![PyPI version](https://badge.fury.io/py/spacial-boxcounting.svg)](https://badge.fury.io/py/spacial-boxcounting)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/spacial-boxcounting.svg)](https://pypi.org/project/spacial-boxcounting/)
-
 ## Abstract
 This project implements a spatial boxcount algorithm that characterizes 2D arrays by topological complexity and spatial heterogeneity. With both CPU and GPU support, it enables spatial similarity search, edge detection, and statistical analysis of image datasets.
 
@@ -15,7 +11,8 @@ This project implements a spatial boxcount algorithm that characterizes 2D array
 - **Multiple Processing Modes**: Spatial maps or single-value results
 - **CPU & GPU Support**: Numba JIT compilation and optional CuPy acceleration
 - **Batch Processing**: Process entire directories of images
-- **Multiple Input Formats**: JPEG, BMP, PNG, and NumPy arrays
+- **Multiple Input Formats**: JPEG, BMP, PNG, and binary files
+- **Hilbert Curve Mapping**: Preserves data locality for binary file analysis
 - **Cross-Platform**: Works on Windows, Linux, and macOS (NVIDIA GPU support)
 
 ## Installation
@@ -84,8 +81,17 @@ spacial-boxcount single --file path/to/image.jpg --mode spatial
 # Process all images in a directory
 spacial-boxcount batch --folder path/to/images/ --mode single
 
-# Process with specific pattern
-spacial-boxcount batch --folder path/to/images/ --pattern "*.jpg"
+# Process with Hilbert curve mapping (for binary files)
+spacial-boxcount single --file path/to/data.bin --mode spatial --hilbert
+```
+
+## Hilbert Curve Mapping for Binary Data
+For binary files, the Hilbert curve mapping preserves data locality when converting 1D data streams to 2D arrays for spatial analysis:
+
+```python
+# Process binary file with Hilbert curve mapping
+result = boxcount_from_file('data.bin', mode='spatial', hilbert=True)
+fd = fractal_dimension_from_file('data.bin', hilbert=True)
 ```
 
 ## GPU Acceleration
@@ -119,37 +125,6 @@ Performance varies by hardware and image size:
 - **Large images (> 512x512)**: GPU provides 2-10x speedup
 - **Batch processing**: GPU provides 5-50x speedup for large batches
 - **AMD users**: CPU optimization available (ROCm support experimental)
-
-See [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md) for detailed benchmarks.
-
-## Documentation
-- [Tutorial](tutorial.md) - Comprehensive usage guide
-- [API Reference](docs/api/) - Detailed function documentation
-- [Platform Compatibility](PLATFORM_COMPATIBILITY.md) - Installation for all systems
-- [Development Roadmap](DEVELOPMENT_ROADMAP.md) - Future plans and progress
-
-## Packaging & Distribution
-This project is structured as a pip-installable package and is available on PyPI. Future releases will include additional features and performance improvements.
-
-## Testing
-Run unit tests with:
-
-```bash
-pytest
-```
-
-Or use the verification script:
-
-```bash
-python final_verification.py
-```
-
-## Academic Context
-Originally derived from academic work in spatial analysis, this repository provides the tools for box counting and lacunarity computation. For a full exposition, please review the accompanying Jupyter Notebook:
-[Spacial boxcount algorithm CPU and GPU.ipynb](https://colab.research.google.com/github/ollimacp/spacial-boxcounting-cpu-gpu/blob/main/Spacial%20boxcount%20algorithm%20CPU%20and%20GPU.ipynb)
-
-## Contributing
-Contributions are welcome! Please see the [Development Roadmap](DEVELOPMENT_ROADMAP.md) for planned features and improvements.
 
 ## License
 See [LICENSE.txt](LICENSE.txt) for details.
