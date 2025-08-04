@@ -7,7 +7,7 @@ name = "spacial_boxcounting"
 version = "0.1.0"
 description = "Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support"
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
@@ -25,7 +25,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
