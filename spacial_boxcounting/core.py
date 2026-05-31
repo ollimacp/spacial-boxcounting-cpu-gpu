@@ -64,24 +64,39 @@ except ImportError:
 
 
 def Z_boxcount_gpu(GlidingBox, boxsize, MaxValue):
-    """Compute the box count and lacunarity using GPU via cupy."""
+    """Compute box count and lacunarity on GPU (fully vectorized, no Python loops).
+
+    Parameters
+    ----------
+    GlidingBox : np.ndarray or cp.ndarray
+        2D sliding window (will be transferred to GPU if needed).
+    boxsize : int
+        Size of the quantization box.
+    MaxValue : int
+        Maximum intensity value (typically 256 for 8-bit).
+
+    Returns
+    -------
+    tuple[int, float]
+        (counted_boxes, lacunarity)
+    """
     GlidingBox_gpu = cp.asarray(GlidingBox)
     continualIndexes = GlidingBox_gpu / boxsize
-    Boxindexes = cp.floor(continualIndexes)
-    unique_Boxes = cp.unique(Boxindexes)
-    counted_Boxes: int = int(unique_Boxes.size)
-    SumPixInBox = cp.array([0.0])
-    for ub in unique_Boxes:
-        mask = (Boxindexes == ub)
-        ElementsCounted = cp.sum(mask)
-        SumPixInBox = cp.append(SumPixInBox, ElementsCounted)
+    Boxindexes = cp.floor(continualIndexes).astype(cp.int32).ravel()
+
+    # Count elements per box index via bincount (fully GPU-vectorized)
+    counts = cp.bincount(Boxindexes)
+    # Remove the zero bin (index 0 always exists in bincount)
+    BoxCounts = counts[counts > 0]
+    counted_Boxes: int = int(BoxCounts.size)
+
     Max_Num_Boxes = int(MaxValue / boxsize)
-    Num_empty_Boxes = Max_Num_Boxes - int(counted_Boxes)
+    Num_empty_Boxes = Max_Num_Boxes - counted_Boxes
     if Num_empty_Boxes >= 1:
-        EmptyBoxes = cp.zeros(Num_empty_Boxes)
-        SumPixInBox = cp.append(SumPixInBox, EmptyBoxes)
-    mean = cp.mean(SumPixInBox)
-    standardDeviation = cp.std(SumPixInBox)
+        BoxCounts = cp.append(BoxCounts, cp.zeros(Num_empty_Boxes, dtype=cp.float64))
+
+    mean = cp.mean(BoxCounts)
+    standardDeviation = cp.std(BoxCounts)
     Lacunarity = cp.power(standardDeviation / mean, 2)
     return counted_Boxes, float(Lacunarity.get())
 
@@ -103,8 +118,7 @@ def spacialBoxcount_gpu(npOutputFile, iteration, MaxValue):
         x_idx = 0
         for j in range(0, int(XRange), boxsize):
             GlidingBox = arr_gpu[i:i+boxsize, j:j+boxsize]
-            # Use CPU function on the small block for simplicity
-            counted_Boxes, Lacunarity = Z_boxcount_gpu(cp.asnumpy(GlidingBox), boxsize, MaxValue)
+            counted_Boxes, Lacunarity = Z_boxcount_gpu(GlidingBox, boxsize, MaxValue)
             Max_Num_Boxes = int(MaxValue / boxsize)
             counted_Box_Ratio = counted_Boxes / Max_Num_Boxes
             BoxCountR_map[y_idx, x_idx] = counted_Box_Ratio
