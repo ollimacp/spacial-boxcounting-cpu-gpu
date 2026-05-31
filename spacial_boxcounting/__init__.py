@@ -19,5 +19,6 @@ Modules
 """
 from . import api, core, cli, batch, io, hilbert, visualize, utils
 from ._version import VERSION
+from .core import GPU_BACKEND, CUPY_AVAILABLE
 
 __version__ = VERSION

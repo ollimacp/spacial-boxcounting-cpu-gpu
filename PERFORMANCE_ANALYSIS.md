@@ -1,44 +1,60 @@
 # Performance Analysis: CPU vs GPU for Spatial Boxcounting
 
 ## Hardware Configuration
-- System: NVIDIA GPU (requires proper CUDA installation)
-- Current status: GPU acceleration available but requires proper CUDA setup
+- **GPU:** NVIDIA GeForce RTX 4060 Ti (16 GB VRAM, Compute Capability 8.9)
+- **CUDA:** 12.9 (CuPy 14.1.0)
+- **CPU:** Docker container on CachyOS Linux
 
-## Benchmark Results
+## Benchmark Results (boxsize=2, iteration=0, 8-bit data)
 
-### Single Image Processing (CPU):
-- 64x64: ~0.002 seconds (after JIT compilation)
-- 128x128: ~0.006 seconds  
-- 256x256: ~0.025 seconds
-- 512x512: ~0.093 seconds
-- 1024x1024: ~0.383 seconds
+| Image Size | CPU (Numba JIT) | GPU (CuPy) | Notes |
+|-----------|-----------------|------------|-------|
+| 128×128   | 0.010 s         | 2.48 s     | GPU launch overhead dominates |
+| 256×256   | 0.042 s         | 9.93 s     | Python loop bottleneck |
+| 512×512   | 0.093 s*        | —          | GPU timed out |
+| 1024×1024 | 0.383 s*        | —          | — |
 
-### GPU Performance:
-GPU acceleration can provide significant speedups for large images and batch processing:
-- Large images (> 512x512): 2-10x speedup
-- Batch processing: 5-50x speedup
-- Small images (< 256x256): CPU often faster due to GPU overhead
+*\* historical baseline (CPU-bound Numba JIT)*
+
+## Current GPU Bottleneck
+
+The `spacialBoxcount_gpu` function processes each sliding window in a **Python-level nested loop**, launching one GPU kernel per window:
+
+- 128×128, boxsize=2 → ~4,096 kernel launches
+- 512×512, boxsize=2 → ~65,536 kernel launches
+
+Each launch incurs GPU scheduling overhead. The `Z_boxcount_gpu` function itself is fully vectorized (via `cp.bincount`), but the outer loop kills performance.
+
+### Fix Plan (next release)
+Replace the Python-level sliding window loop with a **batched 4D tensor approach**:
+
+```python
+# Instead of: for each window, call Z_boxcount_gpu()
+# Do:               reshape into (ny, nx, bs, bs) and process all windows at once
+```
+
+Expected: **2–10× speedup** over CPU for images ≥ 512×512.
 
 ## Performance Optimization Tips
 
-1. **CPU Optimization**:
-   - First run may be slower due to Numba JIT compilation
-   - Subsequent runs benefit from cached compiled code
-   - Multi-threading support through Numba parallelization
+### CPU (Numba JIT)
+- First run is slower due to JIT compilation — subsequent runs use cached code
+- Multi-scale processing: run multiple iterations in parallel with Python threads
+- Numba `nopython=True` releases the GIL
 
-2. **GPU Optimization**:
-   - Ensure CUDA drivers and toolkit are properly installed
-   - Install appropriate CuPy version for your CUDA version
-   - GPU acceleration most beneficial for large images and batch processing
+### GPU (CuPy)
+- **Current limitation:** only beneficial for batch processing where the Python loop overhead is amortised
+- For per-image processing: CPU (Numba JIT) is faster until GPU loop is batched
+- Install matching CuPy version: `pip install spacial_boxcounting[gpu]` (NVIDIA) or `spacial_boxcounting[gpu-amd]` (AMD ROCm)
 
-3. **Memory Considerations**:
-   - Large images may require significant memory
-   - GPU memory limitations may restrict maximum image sizes
-   - Consider processing in chunks for very large datasets
+### Cross-Platform
+| Platform | GPU Support | Notes |
+|----------|------------|-------|
+| Linux    | NVIDIA ✓, AMD ✓ (ROCm) | Best performance |
+| Windows  | NVIDIA ✓ | CUDA drivers required |
+| macOS    | CPU only | No NVIDIA/AMD GPU support |
 
-## Cross-Platform Performance
-
-- **Linux**: Best performance with full GPU support
-- **Windows**: Good performance, CUDA support available
-- **macOS**: CPU-only performance, no CUDA support
-- **AMD GPUs**: Experimental ROCm support available
+## Memory Considerations
+- GPU: images must fit in VRAM (~16 GB available on RTX 4060 Ti)
+- CPU: limited by system RAM
+- Future batched GPU processing will increase memory usage proportionally to batch size

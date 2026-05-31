@@ -55,12 +55,25 @@ def spacialBoxcount(npOutputFile, iteration, MaxValue):
         BoxBoundriesY[1] += boxsize
     return [BoxCountR_map, spa_Lac_map]
 
-# GPU Acceleration Functions
+# GPU Acceleration — auto-detect backend
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
+
+    # Detect whether CuPy was built for CUDA or ROCm
+    try:
+        _cupy_backend = cp.cuda.runtime.runtimeGetVersion()
+        GPU_BACKEND = "cuda"
+    except Exception:
+        try:
+            _cupy_backend = cp.cuda.runtime.getDeviceCount()
+            GPU_BACKEND = "rocm"
+        except Exception:
+            GPU_BACKEND = "unknown"
 except ImportError:
     CUPY_AVAILABLE = False
+    GPU_BACKEND = None
 
 
 def Z_boxcount_gpu(GlidingBox, boxsize, MaxValue):
