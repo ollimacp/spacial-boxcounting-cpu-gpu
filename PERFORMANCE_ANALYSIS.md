@@ -5,35 +5,63 @@
 - **CUDA:** 12.9 (CuPy 14.1.0)
 - **CPU:** Docker container on CachyOS Linux
 
-## Benchmark Results (boxsize=2, iteration=0, 8-bit data)
+## Benchmark Results (v0.2.0, batched GPU)
 
-| Image Size | CPU (Numba JIT) | GPU (CuPy) | Notes |
-|-----------|-----------------|------------|-------|
-| 128×128   | 0.010 s         | 2.48 s     | GPU launch overhead dominates |
-| 256×256   | 0.042 s         | 9.93 s     | Python loop bottleneck |
-| 512×512   | 0.093 s*        | —          | GPU timed out |
-| 1024×1024 | 0.383 s*        | —          | — |
+All windows are processed in a **single kernel launch** via 4D-tensor reshaping
+and vectorised CuPy operations. No Python-level loops in the GPU path.
 
-*\* historical baseline (CPU-bound Numba JIT)*
+### boxsize=2 (iteration=0)
 
-## Current GPU Bottleneck
+| Image Size | CPU (Numba JIT) | GPU (CuPy batched) | Speedup |
+|-----------|-----------------|--------------------|---------|
+| 128×128   | 0.010 s         | 0.001 s            | **9×** 🚀 |
+| 256×256   | 0.041 s         | 0.005 s            | **9×** 🚀 |
+| 512×512   | 0.164 s         | 0.049 s            | **3×** 🚀 |
+| 1024×1024 | 0.661 s         | 0.255 s            | **2.6×** 🚀 |
 
-The `spacialBoxcount_gpu` function processes each sliding window in a **Python-level nested loop**, launching one GPU kernel per window:
+### boxsize=4 (iteration=1)
 
-- 128×128, boxsize=2 → ~4,096 kernel launches
-- 512×512, boxsize=2 → ~65,536 kernel launches
+| Image Size | CPU (Numba JIT) | GPU (CuPy batched) | Speedup |
+|-----------|-----------------|--------------------|---------|
+| 128×128   | 0.005 s         | 0.001 s            | **5×** 🚀 |
+| 256×256   | 0.021 s         | 0.001 s            | **18×** 🚀 |
+| 512×512   | 0.085 s         | 0.007 s            | **12×** 🚀 |
+| 1024×1024 | 0.338 s         | 0.031 s            | **11×** 🚀 |
 
-Each launch incurs GPU scheduling overhead. The `Z_boxcount_gpu` function itself is fully vectorized (via `cp.bincount`), but the outer loop kills performance.
+### boxsize=16 (iteration=3)
 
-### Fix Plan (next release)
-Replace the Python-level sliding window loop with a **batched 4D tensor approach**:
+| Image Size | CPU (Numba JIT) | GPU (CuPy batched) | Speedup |
+|-----------|-----------------|--------------------|---------|
+| 128×128   | 0.001 s         | 0.001 s            | 1× (tie) |
+| 256×256   | 0.004 s         | 0.001 s            | **4×** 🚀 |
+| 512×512   | 0.017 s         | 0.001 s            | **16×** 🚀 |
+| 1024×1024 | 0.066 s         | 0.002 s            | **35×** 🚀 |
+
+### Key insight
+
+GPU advantage grows with **larger boxsizes** (fewer windows, more pixels per
+window → better GPU utilisation) and **larger images**. For boxsize=2 on
+1024×1024 the speedup is modest (2.6×) because there are 262k windows each
+containing only 4 pixels — the GPU is under-utilised. At boxsize=16 on the
+same image: only 4k windows with 256 pixels each → **35× speedup**.
+
+For images below 128×128, CPU (Numba JIT) is competitive and often simpler.
+
+## Architecture: Batched 4D Tensor
+
+The `spacialBoxcount_gpu` function in v0.2.0 uses a single batched kernel
+launch:
 
 ```python
-# Instead of: for each window, call Z_boxcount_gpu()
-# Do:               reshape into (ny, nx, bs, bs) and process all windows at once
+# 1. Reshape image into (ny, nx, boxsize, boxsize) 4D tensor
+# 2. Floor division → integer box indices for ALL windows
+# 3. Per-window unique count via sort + diff
+# 4. Per-window histogram via offset cp.bincount (single call)
+# 5. Lacunarity via cp.mean / cp.std on stacked histograms
 ```
 
-Expected: **2–10× speedup** over CPU for images ≥ 512×512.
+This replaces the v0.1.0 approach of 4k–65k individual kernel launches
+per image (which was 200–2000× slower than CPU).
 
 ## Performance Optimization Tips
 
@@ -43,9 +71,8 @@ Expected: **2–10× speedup** over CPU for images ≥ 512×512.
 - Numba `nopython=True` releases the GIL
 
 ### GPU (CuPy)
-- **Current limitation:** only beneficial for batch processing where the Python loop overhead is amortised
-- For per-image processing: CPU (Numba JIT) is faster until GPU loop is batched
 - Install matching CuPy version: `pip install spacial_boxcounting[gpu]` (NVIDIA) or `spacial_boxcounting[gpu-amd]` (AMD ROCm)
+- For maximum throughput: process multiple images in a batch
 
 ### Cross-Platform
 | Platform | GPU Support | Notes |
@@ -55,6 +82,7 @@ Expected: **2–10× speedup** over CPU for images ≥ 512×512.
 | macOS    | CPU only | No NVIDIA/AMD GPU support |
 
 ## Memory Considerations
-- GPU: images must fit in VRAM (~16 GB available on RTX 4060 Ti)
+- GPU: images and intermediate tensors must fit in VRAM (~16 GB on RTX 4060 Ti)
+- The batched histogram has shape `(N_windows, MaxValue/boxsize)` — for 1024×1024
+  with boxsize=2 this is (262k, 128) ≈ 268 MB. Acceptable for 16 GB VRAM.
 - CPU: limited by system RAM
-- Future batched GPU processing will increase memory usage proportionally to batch size
