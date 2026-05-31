@@ -9,10 +9,10 @@ description = "Convenient package for spatial box counting and fractal analysis 
 readme = "README.md"
 license = "MIT"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Ole Peters", email = "ollimacp@gmail.com"}
 ]
 maintainers = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Ole Peters", email = "ollimacp@gmail.com"}
 ]
 keywords = [
     "fractal-analysis",
@@ -57,11 +57,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
-Repository = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
-Documentation = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu#readme"
-"Bug Reports" = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu/issues"
-"Source Code" = "https://github.com/yourusername/spacial-boxcounting-cpu-gpu"
+Homepage = "https://github.com/ollimacp/spacial-boxcounting-cpu-gpu"
+Repository = "https://github.com/ollimacp/spacial-boxcounting-cpu-gpu"
+Documentation = "https://github.com/ollimacp/spacial-boxcounting-cpu-gpu#readme"
+"Bug Reports" = "https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/issues"
+"Source Code" = "https://github.com/ollimacp/spacial-boxcounting-cpu-gpu"
 
 [project.scripts]
 spacial-boxcount = "spacial_boxcounting.cli:main"

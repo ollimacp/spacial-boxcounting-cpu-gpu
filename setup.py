@@ -12,9 +12,9 @@ setup(
     description='Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='Your Name',
-    author_email='your.email@example.com',
-    url='https://github.com/yourusername/spacial-boxcounting-cpu-gpu',
+    author='Ole Peters',
+    author_email='ollimacp@gmail.com',
+    url='https://github.com/ollimacp/spacial-boxcounting-cpu-gpu',
     packages=find_packages(),
     install_requires=[
         'numpy>=1.20.0',

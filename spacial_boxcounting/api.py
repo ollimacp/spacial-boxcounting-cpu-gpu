@@ -1,184 +1,256 @@
-import math
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Union
+
 import numpy as np
+
+from .core import Z_boxcount, spacialBoxcount
 from .io import load_file_as_ndarray
-from .core import spacialBoxcount, Z_boxcount
 
 
-def boxcount_from_file(filepath, mode='spatial', hilbert=False, **kwargs):
+def boxcount_from_file(
+    filepath: str,
+    mode: str = "spatial",
+    hilbert: bool = False,
+    **kwargs: Any,
+) -> Union[List[np.ndarray], Dict[str, float]]:
     """Compute box count from a file.
 
-    Parameters:
-        filepath (str): Path to the input file.
-        mode (str): 'spatial' for 2D result, 'single' for overall count.
-        hilbert (bool): If True, apply Hilbert curve transformation.
-        **kwargs: Additional parameters for future extensions.
+    Parameters
+    ----------
+    filepath : str
+        Path to the input file (image, .npy, or binary).
+    mode : str
+        ``"spatial"`` for 2D spatial box count map, ``"single"`` for
+        overall box count and lacunarity. Default is ``"spatial"``.
+    hilbert : bool
+        If True, apply Hilbert curve transformation for binary files.
+        Default is False.
+    **kwargs : Any
+        Additional parameters for future extensions.
 
-    Returns:
-        np.ndarray or dict: Spatial box count array or dict with single box count and lacunarity.
+    Returns
+    -------
+    list of np.ndarray or dict
+        In spatial mode: list of two 2D arrays
+        (box-count-ratio map, spatial lacunarity map).
+        In single mode: dict with keys ``"boxcount"`` and ``"lacunarity"``.
     """
-    arr = load_file_as_ndarray(filepath, mode='auto', hilbert=hilbert)
-    maxvalue = 256  # assuming 8-bit data
-    if mode == 'spatial':
-        # For demonstration, use the first iteration (box size = 2)
-        result = spacialBoxcount(arr, 0, maxvalue)
-        return result
-    elif mode == 'single':
-        # Use an arbitrary box size, e.g., 8 (index 2 in list [2,4,8,...])
-        counted, lacunarity = Z_boxcount(arr, 8, maxvalue)  
-        return {'boxcount': counted, 'lacunarity': lacunarity}
+    arr = load_file_as_ndarray(filepath, mode="auto", hilbert=hilbert)
+    maxvalue = 256  # default 8-bit max
+
+    if mode == "spatial":
+        return spacialBoxcount(arr, 0, maxvalue)
+    elif mode == "single":
+        counted, lacunarity = Z_boxcount(arr, 8, maxvalue)
+        return {"boxcount": counted, "lacunarity": lacunarity}
     else:
         raise ValueError("Unsupported mode. Use 'spatial' or 'single'.")
 
 
-def boxcount_from_array(arr, mode='spatial', hilbert=False, maxvalue=256):
+def boxcount_from_array(
+    arr: np.ndarray,
+    mode: str = "spatial",
+    hilbert: bool = False,
+    maxvalue: int = 256,
+) -> Union[List[np.ndarray], Dict[str, float]]:
     """Compute box count from a numpy array.
 
-    Parameters:
-        arr (np.ndarray): Input array
-        mode (str): 'spatial' for spatial box count map, 'single' for overall count
-        hilbert (bool): If True, apply Hilbert transform (if needed).
-        maxvalue (int): Maximum value, defaults to 256 for 8-bit data
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input 2D array.
+    mode : str
+        ``"spatial"`` for spatial box count map, ``"single"`` for
+        overall count. Default is ``"spatial"``.
+    hilbert : bool
+        If True, apply Hilbert transform. Default is False.
+    maxvalue : int
+        Maximum value for box quantization. Default is 256 (8-bit).
 
-    Returns:
-        np.ndarray or dict: Spatial box count result or dictionary with box count and lacunarity in single mode.
+    Returns
+    -------
+    list of np.ndarray or dict
+        Spatial result or dictionary with ``"boxcount"`` and
+        ``"lacunarity"``.
     """
-    from .core import spacialBoxcount, Z_boxcount
-    if mode == 'spatial':
-        result = spacialBoxcount(arr, 0, maxvalue)
-        return result
-    elif mode == 'single':
+    if mode == "spatial":
+        return spacialBoxcount(arr, 0, maxvalue)
+    elif mode == "single":
         counted, lacunarity = Z_boxcount(arr, 8, maxvalue)
-        return {'boxcount': counted, 'lacunarity': lacunarity}
+        return {"boxcount": counted, "lacunarity": lacunarity}
     else:
         raise ValueError("Unsupported mode. Use 'spatial' or 'single'.")
 
 
-def fractal_dimension(arr_or_path, **kwargs):
-    """Compute fractal dimension from either an array or file path.
-    
-    Parameters:
-        arr_or_path (np.ndarray or str): Input array or file path
-        **kwargs: Additional parameters
-        
-    Returns:
-        float: Fractal dimension estimate
+def fractal_dimension(
+    arr_or_path: Union[np.ndarray, str],
+    **kwargs: Any,
+) -> float:
+    """Compute fractal dimension from an array or file path.
+
+    Parameters
+    ----------
+    arr_or_path : np.ndarray or str
+        Input 2D array or path to a file.
+    **kwargs : Any
+        Additional parameters forwarded to the specific implementation.
+
+    Returns
+    -------
+    float
+        Fractal dimension estimate.
     """
     if isinstance(arr_or_path, str):
         return fractal_dimension_from_file(arr_or_path, **kwargs)
-    else:
-        return fractal_dimension_from_array(arr_or_path, **kwargs)
+    return fractal_dimension_from_array(arr_or_path, **kwargs)
 
 
-def multi_scale_fractal_dimension_from_array(arr, scales=range(10), maxvalue=256, BoxSizes=None):
-    """Compute fractal dimension from a numpy array using multi-scale box counting.
-    
-    Parameters:
-        arr (np.ndarray): Input 2D array.
-        scales (iterable): Indices of scales to use (default: 0-9).
-        maxvalue (int): Maximum value, default is 256 (for 8-bit).
-        BoxSizes (list): Box sizes, defaults to powers of 2
+def fractal_dimension_from_array(
+    arr: np.ndarray,
+    maxvalue: int = 256,
+    box_sizes: Optional[List[int]] = None,
+) -> float:
+    """Compute fractal dimension from a numpy array via multi-scale box counting.
 
-    Returns:
-        float: Fractal dimension estimate.
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input 2D array.
+    maxvalue : int
+        Maximum pixel value. Default is 256.
+    box_sizes : list of int, optional
+        Box sizes to use. Defaults to powers of 2 up to the array size.
+
+    Returns
+    -------
+    float
+        Fractal dimension estimate. Returns 0.0 if there is insufficient data.
     """
-    # Set default box sizes if not provided
+    if box_sizes is None:
+        max_size = min(arr.shape)
+        box_sizes = [2**i for i in range(1, int(np.log2(max_size)) + 1)]
+
+    counts = []
+    for bs in box_sizes:
+        count, _ = Z_boxcount(arr, bs, maxvalue)
+        counts.append(count)
+
+    valid_idx = [i for i, c in enumerate(counts) if c > 0]
+    if len(valid_idx) < 2:
+        return 0.0
+
+    log_sizes = np.log([box_sizes[i] for i in valid_idx])
+    log_counts = np.log([counts[i] for i in valid_idx])
+    slope, _ = np.polyfit(log_sizes, log_counts, 1)
+    return -slope
+
+
+def fractal_dimension_from_file(
+    filepath: str,
+    maxvalue: int = 256,
+    box_sizes: Optional[List[int]] = None,
+    hilbert: bool = False,
+) -> float:
+    """Compute fractal dimension from a file via multi-scale box counting.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the input file.
+    maxvalue : int
+        Maximum pixel value. Default is 256.
+    box_sizes : list of int, optional
+        Box sizes to use.
+    hilbert : bool
+        Apply Hilbert curve transformation for binary files. Default is False.
+
+    Returns
+    -------
+    float
+        Fractal dimension estimate.
+    """
+    arr = load_file_as_ndarray(filepath, mode="auto", hilbert=hilbert)
+    return fractal_dimension_from_array(arr, maxvalue, box_sizes)
+
+
+def multi_scale_fractal_dimension_from_array(
+    arr: np.ndarray,
+    scales: range = range(10),
+    maxvalue: int = 256,
+    BoxSizes: Optional[List[int]] = None,
+) -> float:
+    """Compute fractal dimension using multi-scale box counting.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input 2D array.
+    scales : iterable
+        Indices of scales to use. Default is ``range(10)``.
+    maxvalue : int
+        Maximum value. Default is 256 (8-bit).
+    BoxSizes : list of int, optional
+        Box sizes. Defaults to powers of 2.
+
+    Returns
+    -------
+    float
+        Fractal dimension estimate. Returns 0.0 if there is insufficient data.
+    """
     if BoxSizes is None:
         BoxSizes = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-    
-    # Import required function
-    from .core import Z_boxcount
-    
-    # Collect box counts for different scales
+
     box_counts = []
     box_sizes_used = []
-    
+
     for iteration in scales:
         bs = BoxSizes[iteration]
-        # Only process if box size is smaller than array dimensions
         if bs <= min(arr.shape):
             counted, _ = Z_boxcount(arr, bs, maxvalue)
-            if counted > 0:  # Only include non-zero counts
+            if counted > 0:
                 box_counts.append(counted)
                 box_sizes_used.append(bs)
-    
-    # Compute fractal dimension from log-log regression
-    if len(box_counts) >= 2:
-        log_sizes = np.log(box_sizes_used)
-        log_counts = np.log(box_counts)
-        # Linear regression (slope = -D, so D = -slope)
-        slope, _ = np.polyfit(log_sizes, log_counts, 1)
-        return -slope
-    else:
-        return 0.0  # Not enough data points
+
+    if len(box_counts) < 2:
+        return 0.0
+
+    log_sizes = np.log(box_sizes_used)
+    log_counts = np.log(box_counts)
+    slope, _ = np.polyfit(log_sizes, log_counts, 1)
+    return -slope
 
 
-def global_boxcount_from_array(arr, scales=range(10), maxvalue=256, BoxSizes = None):
+def global_boxcount_from_array(
+    arr: np.ndarray,
+    scales: range = range(10),
+    maxvalue: int = 256,
+    BoxSizes: Optional[List[int]] = None,
+) -> Dict[int, int]:
     """Compute overall box counts for multiple scales from a numpy array.
 
-    Parameters:
-        arr (np.ndarray): Input 2D array.
-        scales (iterable): Indices of scales to use (default: 0-9).
-        maxvalue (int): Maximum value, default is 256 (for 8-bit).
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input 2D array.
+    scales : iterable
+        Indices of scales to use. Default is ``range(10)``.
+    maxvalue : int
+        Maximum value. Default is 256 (8-bit).
+    BoxSizes : list of int, optional
+        Box sizes. Defaults to powers of 2.
 
-    Returns:
-        dict: Mapping from box size to overall box count.
+    Returns
+    -------
+    dict
+        Mapping from box size to overall box count.
     """
     if BoxSizes is None:
         BoxSizes = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
 
-    from .core import Z_boxcount
-    result = {}
+    result: Dict[int, int] = {}
     for iteration in scales:
         bs = BoxSizes[iteration]
         counted, _ = Z_boxcount(arr, bs, maxvalue)
         result[bs] = counted
     return result
-
-
-
-def fractal_dimension_from_array(arr, maxvalue=256, box_sizes=None):
-    """
-    Compute fractal dimension from a numpy array using multi-scale box counting.
-    
-    Parameters:
-        arr (np.ndarray): Input 2D array
-        maxvalue (int): Maximum pixel value (default 256)
-        box_sizes (list): Box sizes to use (default powers of 2)
-        
-    Returns:
-        float: Fractal dimension estimate
-    """
-    # Set default box sizes (powers of 2 up to array size)
-    if box_sizes is None:
-        max_size = min(arr.shape)
-        box_sizes = [2**i for i in range(1, int(np.log2(max_size)) + 1)]
-    
-    counts = []
-    for bs in box_sizes:
-        count, _ = Z_boxcount(arr, bs, maxvalue)
-        counts.append(count)
-    
-    # Filter zero counts and compute logs
-    valid_idx = [i for i, c in enumerate(counts) if c > 0]
-    log_sizes = np.log([box_sizes[i] for i in valid_idx])
-    log_counts = np.log([counts[i] for i in valid_idx])
-    
-    # Linear regression (slope = -D)
-    slope, _ = np.polyfit(log_sizes, log_counts, 1)
-    return -slope
-
-def fractal_dimension_from_file(filepath, maxvalue=256, box_sizes=None, hilbert=False):
-    """
-    Compute fractal dimension from file using multi-scale box counting.
-    
-    Parameters:
-        filepath (str): Path to input file
-        maxvalue (int): Maximum pixel value (default 256)
-        box_sizes (list): Box sizes to use
-        hilbert (bool): Apply Hilbert curve transformation
-        
-    Returns:
-        float: Fractal dimension estimate
-    """
-    arr = load_file_as_ndarray(filepath, mode='auto', hilbert=hilbert)
-    return fractal_dimension_from_array(arr, maxvalue, box_sizes)
