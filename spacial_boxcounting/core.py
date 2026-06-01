@@ -9,9 +9,13 @@ def Z_boxcount(GlidingBox, boxsize, MaxValue):
     Boxindexes = np.floor(continualIndexes)
     unique_Boxes = np.unique(Boxindexes)
     counted_Boxes = len(unique_Boxes)
-    InitalEntry = [0.0]
-    SumPixInBox = np.array(InitalEntry)
-    for unique_BoxIndex in unique_Boxes:
+
+    # Build histogram: count pixels per box index, starting with first box
+    first_box = unique_Boxes[0]
+    first_count = np.sum(Boxindexes == first_box)
+    # Use float for type consistency with EmptyBoxes (np.zeros) below
+    SumPixInBox = np.array([float(first_count)])
+    for unique_BoxIndex in unique_Boxes[1:]:
         ElementsCountedTRUTHTABLE = Boxindexes == unique_BoxIndex
         ElementsCounted = np.sum(ElementsCountedTRUTHTABLE)
         SumPixInBox = np.append(SumPixInBox, ElementsCounted)
@@ -184,11 +188,9 @@ def spacialBoxcount_gpu(npOutputFile, iteration, MaxValue):
     BoxCountR_map = (counted_Boxes.astype(cp.float64) / Max_Num_Boxes).reshape(ny, nx)
 
     # Step 5 — lacunarity per window
-    expanded = cp.hstack(
-        [cp.zeros((N_windows, 1), dtype=cp.float64), hist.astype(cp.float64)]
-    )
-    means = cp.mean(expanded, axis=1)
-    stds = cp.std(expanded, axis=1)
+    hist_f64 = hist.astype(cp.float64)
+    means = cp.mean(hist_f64, axis=1)
+    stds = cp.std(hist_f64, axis=1)
     Lacunarity = cp.power(stds / means, 2)
     spa_Lac_map = Lacunarity.reshape(ny, nx)
 

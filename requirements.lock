@@ -1,0 +1,13 @@
+# Pinned dependencies for spacial-boxcounting — generated 2026-06-01
+# Only direct project dependencies; transitive deps managed by pip resolver.
+# Regenerate: pip freeze | grep -E "^(Pillow|bandit|hilbertcurve|matplotlib|numba|numpy|pandas|pytest|safety|sphinx)="
+Pillow==12.2.0
+bandit==1.9.4
+hilbertcurve==2.0.5
+matplotlib==3.10.9
+numba==0.65.1
+numpy==2.4.6
+pandas==3.0.3
+pytest==9.0.2
+safety==3.8.1
+sphinx==9.1.0

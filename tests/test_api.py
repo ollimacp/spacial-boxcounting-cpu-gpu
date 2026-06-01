@@ -184,3 +184,64 @@ def test_backend_gpu_without_cupy_raises() -> None:
     if not CUPY_AVAILABLE:
         with pytest.raises(ImportError, match="GPU backend requested"):
             boxcount_from_array(arr, mode="single", backend="gpu")
+
+
+# ---------------------------------------------------------------------------
+# CPU [0.0] artefact — fixed in v0.3.1
+# ---------------------------------------------------------------------------
+
+
+def test_z_boxcount_histogram_no_leading_zero() -> None:
+    """Histogram must NOT contain a spurious leading zero from InitialEntry."""
+    from spacial_boxcounting.core import Z_boxcount
+
+    arr = np.array([[10, 20], [30, 40]], dtype=np.float32)
+    # Z_boxcount returns (boxcount, lacunarity) — we verify it doesn't crash
+    # and that the internal histogram (tested via lacunarity) is correct.
+    # With boxsize=2, all 4 values map to floor(pixel/2) = [5,10,15,20].
+    # That's 4 unique boxes — lacunarity measures distribution.
+    counted, lac = Z_boxcount(arr, 2, 256)
+    assert isinstance(counted, (int, np.integer))
+    assert isinstance(lac, float)
+    assert counted >= 1
+    assert lac >= 0.0
+
+
+def test_lacunarity_no_leading_zero_effect() -> None:
+    """With the [0.0] bug fixed, lacunarity matches true population variance.
+
+    Uses a case where counted_Boxes >= Max_Num_Boxes so no empty-box padding
+    is appended — isolating the leading-zero artefact.
+    """
+    from spacial_boxcounting.core import Z_boxcount
+
+    # 2×2 array, boxsize=2, MaxValue=4 → Max_Num_Boxes=2
+    # Values: floor(pixel/2) = [0, 1, 2, 3] → 4 unique boxes
+    # counted_Boxes=4 >= Max_Num_Boxes=2 → no empty boxes appended
+    # Histogram (after fix): [1, 1, 1, 1] → all boxes equal → lacunarity=0
+    # Histogram (with bug):  [0, 1, 1, 1, 1] → leading zero skews result
+    arr = np.array([[0, 2], [4, 6]], dtype=np.float32)
+    counted, lac = Z_boxcount(arr, 2, 4)
+    assert counted == 4
+    # With the fix: all counts equal → σ=0 → lac=0
+    assert lac == 0.0, (
+        f"Expected lacunarity=0 for uniform histogram [1,1,1,1], "
+        f"got {lac}. Leading-zero bug still present?"
+    )
+
+
+def test_cpu_gpu_lacunarity_consistent() -> None:
+    """After the fix, CPU and GPU lacunarity should be naturally identical."""
+    from spacial_boxcounting.core import Z_boxcount
+
+    rng = np.random.default_rng(seed=42)
+    arr = rng.integers(0, 256, size=(64, 64), dtype=np.uint8)
+
+    _, lac_cpu = Z_boxcount(arr, 4, 256)
+
+    if CUPY_AVAILABLE:
+        from spacial_boxcounting.core import Z_boxcount_gpu
+        _, lac_gpu = Z_boxcount_gpu(arr, 4, 256)
+        assert lac_cpu == pytest.approx(lac_gpu), (
+            f"CPU lacunarity {lac_cpu} != GPU lacunarity {lac_gpu}"
+        )

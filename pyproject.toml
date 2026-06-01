@@ -82,3 +82,6 @@ addopts = "-v"
 
 [tool.bandit]
 exclude_dirs = [".git", ".venv", "venv", "build", "dist"]
+
+[tool.pip]
+verify-signatures = true
