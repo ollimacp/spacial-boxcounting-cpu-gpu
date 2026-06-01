@@ -18,22 +18,23 @@ jobs:
       - run: pip install bandit
       - run: bandit -r spacial_boxcounting/ --exclude ./tests,./.venv,./deprecated
 
-  safety:
+  pip-audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install . safety
-      - run: safety scan
+      - run: pip install . pip-audit
+      - run: pip-audit
 
-  secret-scan:
+  gitleaks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz -C /usr/local/bin gitleaks
+      - run: gitleaks detect --source . --verbose
