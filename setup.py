@@ -8,7 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='spacial_boxcounting',
-    version='0.2.0',
+    version='0.3.0',
     description='Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support',
     long_description=long_description,
     long_description_content_type='text/markdown',
