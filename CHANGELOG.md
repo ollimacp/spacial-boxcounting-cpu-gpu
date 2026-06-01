@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-01
+
+### Fixed
+- **CPU [0.0] leading-zero artefact** removed from `Z_boxcount()` histogram. The
+  spurious `InitalEntry = [0.0]` caused ~0.81% deviation in lacunarity values.
+  Boxcount and fractal dimension are unaffected.
+- GPU batched `spacialBoxcount_gpu()` no longer replicates the CPU bug — CPU and
+  GPU lacunarity are now naturally identical without workarounds.
+
+### Security
+- `requirements.lock` with pinned dependency versions
+- `.github/workflows/security.yml`: bandit + pip-audit + gitleaks on every PR
+- `security_audit.sh` for local pre-release checks
+- `pyproject.toml`: pip signature verification enabled
+
 ## [0.3.0] - 2026-06-01
 
 ### Added
@@ -74,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Developed platform compatibility guide for NVIDIA, AMD, and CPU-only users
 - Documentation organization plan for comprehensive API reference
 
-[Unreleased]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ollimacp/spacial-boxcounting-cpu-gpu/releases/tag/v0.1.0
