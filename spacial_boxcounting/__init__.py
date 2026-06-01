@@ -7,9 +7,9 @@ with both CPU and GPU support.
 
 Modules
 -------
-- api: High-level API functions
+- api: High-level API functions (supports ``backend="cpu"`` and ``backend="gpu"``)
 - core: Core algorithms (CPU and GPU)
-- cli: Command-line interface
+- cli: Command-line interface (supports ``--backend cpu|gpu``)
 - batch: Batch processing functionality
 - io: File I/O operations
 - hilbert: Hilbert curve transformations
@@ -17,8 +17,8 @@ Modules
 - utils: Utility functions
 
 """
-from . import api, core, cli, batch, io, hilbert, visualize, utils
+from . import api, batch, cli, core, hilbert, io, utils, visualize
 from ._version import VERSION
-from .core import GPU_BACKEND, CUPY_AVAILABLE
+from .core import CUPY_AVAILABLE, GPU_BACKEND, Z_boxcount_gpu, spacialBoxcount_gpu
 
 __version__ = VERSION

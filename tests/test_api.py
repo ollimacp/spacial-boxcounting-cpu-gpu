@@ -12,6 +12,7 @@ from spacial_boxcounting.api import (
     global_boxcount_from_array,
     multi_scale_fractal_dimension_from_array,
 )
+from spacial_boxcounting.core import CUPY_AVAILABLE
 
 
 # ---------------------------------------------------------------------------
@@ -115,3 +116,71 @@ def test_global_boxcount_from_array(test_array: np.ndarray) -> None:
     for bs in expected_box_sizes:
         assert bs in result
         assert isinstance(result[bs], (int, np.integer))
+
+
+# ---------------------------------------------------------------------------
+# backend parameter
+# ---------------------------------------------------------------------------
+
+
+def test_backend_invalid_raises() -> None:
+    arr = np.zeros((16, 16), dtype=np.uint8)
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        boxcount_from_array(arr, mode="single", backend="cuda")
+
+
+def test_backend_cpu_is_default(test_array: np.ndarray) -> None:
+    """Explicit cpu backend should match the default (no backend arg)."""
+    default = boxcount_from_array(test_array, mode="single")
+    explicit = boxcount_from_array(test_array, mode="single", backend="cpu")
+    assert default["boxcount"] == explicit["boxcount"]
+
+
+def test_backend_cpu_all_functions(test_array: np.ndarray) -> None:
+    """Every public function accepts backend='cpu' without error."""
+    boxcount_from_array(test_array, mode="spatial", backend="cpu")
+    boxcount_from_array(test_array, mode="single", backend="cpu")
+    fractal_dimension_from_array(test_array, backend="cpu")
+    multi_scale_fractal_dimension_from_array(
+        test_array, scales=range(3), backend="cpu"
+    )
+    result = global_boxcount_from_array(test_array, scales=range(3), backend="cpu")
+    assert isinstance(result, dict)
+
+
+@pytest.mark.skipif(not CUPY_AVAILABLE, reason="CuPy not installed")
+def test_backend_gpu_spatial(test_array: np.ndarray) -> None:
+    result = boxcount_from_array(test_array, mode="spatial", backend="gpu")
+    assert isinstance(result, list)
+    assert len(result) == 2
+
+
+@pytest.mark.skipif(not CUPY_AVAILABLE, reason="CuPy not installed")
+def test_backend_gpu_single(test_array: np.ndarray) -> None:
+    result = boxcount_from_array(test_array, mode="single", backend="gpu")
+    assert isinstance(result, dict)
+    assert "boxcount" in result
+    assert "lacunarity" in result
+
+
+@pytest.mark.skipif(not CUPY_AVAILABLE, reason="CuPy not installed")
+def test_backend_gpu_fractal_dimension(test_array: np.ndarray) -> None:
+    fd = fractal_dimension_from_array(test_array, backend="gpu")
+    assert isinstance(fd, float)
+    assert fd >= 0
+
+
+@pytest.mark.skipif(not CUPY_AVAILABLE, reason="CuPy not installed")
+def test_backend_gpu_vs_cpu_consistency(test_array: np.ndarray) -> None:
+    """CPU and GPU single-mode boxcounts must match."""
+    cpu = boxcount_from_array(test_array, mode="single", backend="cpu")
+    gpu = boxcount_from_array(test_array, mode="single", backend="gpu")
+    assert cpu["boxcount"] == gpu["boxcount"]
+
+
+def test_backend_gpu_without_cupy_raises() -> None:
+    """Requesting GPU without CuPy must raise ImportError."""
+    arr = np.zeros((16, 16), dtype=np.uint8)
+    if not CUPY_AVAILABLE:
+        with pytest.raises(ImportError, match="GPU backend requested"):
+            boxcount_from_array(arr, mode="single", backend="gpu")

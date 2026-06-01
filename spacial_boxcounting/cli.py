@@ -1,6 +1,7 @@
 import argparse
-import os
 import glob
+import os
+
 from spacial_boxcounting.api import boxcount_from_file, fractal_dimension
 
 try:
@@ -16,23 +17,45 @@ def main():
     # Single file processing
     parser_single = subparsers.add_parser("single", help="Process a single file")
     parser_single.add_argument("--file", required=True, help="Path to the input file")
-    parser_single.add_argument("--mode", choices=["spatial", "single"], default="spatial", help="Mode to use")
-    parser_single.add_argument("--hilbert", action="store_true", help="Apply Hilbert transform")
+    parser_single.add_argument(
+        "--mode", choices=["spatial", "single"], default="spatial", help="Mode to use"
+    )
+    parser_single.add_argument(
+        "--hilbert", action="store_true", help="Apply Hilbert transform"
+    )
+    parser_single.add_argument(
+        "--backend",
+        choices=["cpu", "gpu"],
+        default="cpu",
+        help="Backend: cpu (default) or gpu (requires CuPy)",
+    )
 
     # Batch processing
     parser_batch = subparsers.add_parser("batch", help="Process a folder of files")
     parser_batch.add_argument("--folder", required=True, help="Path to input folder")
-    parser_batch.add_argument("--mode", choices=["spatial", "single"], default="spatial", help="Mode to use")
-    parser_batch.add_argument("--hilbert", action="store_true", help="Apply Hilbert transform")
+    parser_batch.add_argument(
+        "--mode", choices=["spatial", "single"], default="spatial", help="Mode to use"
+    )
+    parser_batch.add_argument(
+        "--hilbert", action="store_true", help="Apply Hilbert transform"
+    )
     parser_batch.add_argument("--pattern", default="*.*", help="File pattern for matching")
+    parser_batch.add_argument(
+        "--backend",
+        choices=["cpu", "gpu"],
+        default="cpu",
+        help="Backend: cpu (default) or gpu (requires CuPy)",
+    )
 
     args = parser.parse_args()
 
     if args.command == "single":
-        result = boxcount_from_file(args.file, mode=args.mode, hilbert=args.hilbert)
-        print(f"Result for file {args.file}:")
+        result = boxcount_from_file(
+            args.file, mode=args.mode, hilbert=args.hilbert, backend=args.backend
+        )
+        print(f"Result for file {args.file} [{args.backend.upper()}]:")
         print(result)
-        fd = fractal_dimension(args.file, hilbert=args.hilbert)
+        fd = fractal_dimension(args.file, hilbert=args.hilbert, backend=args.backend)
         print(f"Fractal dimension: {fd:.3f}")
 
     elif args.command == "batch":
@@ -44,11 +67,13 @@ def main():
             iterator = files
         for file in iterator:
             try:
-                res = boxcount_from_file(file, mode=args.mode, hilbert=args.hilbert)
+                res = boxcount_from_file(
+                    file, mode=args.mode, hilbert=args.hilbert, backend=args.backend
+                )
                 results[os.path.basename(file)] = res
             except Exception as e:
                 results[os.path.basename(file)] = f"Error: {e}"
-        print("Batch processing results:")
+        print(f"Batch processing results [{args.backend.upper()}]:")
         for fname, res in results.items():
             print(f"{fname}: {res}")
     else:
