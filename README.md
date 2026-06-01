@@ -9,11 +9,11 @@ This project implements a spatial boxcount algorithm that characterizes 2D array
 - **Spatial Box Counting**: Produces 2D maps of box count ratios and lacunarity
 - **Fractal Dimension Analysis**: Multi-scale fractal dimension computation
 - **Multiple Processing Modes**: Spatial maps or single-value results
-- **CPU & GPU Support**: Numba JIT compilation and optional CuPy acceleration
+- **CPU & GPU Support**: Numba JIT compilation and CuPy acceleration — switch via `backend="cpu"|"gpu"`
 - **Batch Processing**: Process entire directories of images
 - **Multiple Input Formats**: JPEG, BMP, PNG, and binary files
 - **Hilbert Curve Mapping**: Preserves data locality for binary file analysis
-- **Cross-Platform**: Works on Windows, Linux, and macOS (NVIDIA GPU support)
+- **Cross-Platform**: Works on Windows, Linux, and macOS
 
 ## Installation
 Install via pip:
@@ -25,30 +25,14 @@ pip install spacial_boxcounting
 # With GPU support (NVIDIA CUDA)
 pip install spacial_boxcounting[gpu]
 
-# Development installation
-pip install -e .
-```
+# With GPU support (AMD ROCm — experimental)
+pip install spacial_boxcounting[gpu-amd]
 
-Ensure dependencies are installed: numpy, numba, Pillow, matplotlib, hilbertcurve, pandas, and optionally cupy for GPU acceleration.
+# Development installation
+pip install -e ".[dev]"
+```
 
 ## Quick Start
-### Processing a Single File
-
-```python
-from spacial_boxcounting.api import boxcount_from_file, fractal_dimension_from_file
-
-# Get spatial box count map (2D maps of box count ratios and lacunarity)
-result_spatial = boxcount_from_file('path/to/your/image.jpg', mode='spatial')
-print('Spatial Box Count Map shape:', [r.shape for r in result_spatial])
-
-# Get overall box count & lacunarity
-result_single = boxcount_from_file('path/to/your/image.jpg', mode='single')
-print('Box Count & Lacunarity:', result_single)
-
-# Compute fractal dimension
-fd = fractal_dimension_from_file('path/to/your/image.jpg')
-print('Fractal Dimension:', fd)
-```
 
 ### Processing from a Numpy Array
 
@@ -58,53 +42,102 @@ from spacial_boxcounting.api import boxcount_from_array, fractal_dimension_from_
 
 arr = np.random.randint(0, 256, size=(256, 256)).astype(np.uint8)
 
-# Spatial processing
-result_spatial = boxcount_from_array(arr, mode='spatial')
-print('Spatial Result shape:', [r.shape for r in result_spatial])
+# Spatial processing (CPU)
+result = boxcount_from_array(arr, mode='spatial')
+print('Spatial Result shape:', [r.shape for r in result])
 
-# Single value processing
-result_single = boxcount_from_array(arr, mode='single')
-print('Single Result:', result_single)
+# Single value processing (CPU)
+result = boxcount_from_array(arr, mode='single')
+print('Box Count & Lacunarity:', result)
 
-# Fractal dimension
-fd = fractal_dimension_from_array(arr)
-print('Fractal Dimension:', fd)
+# GPU-accelerated — just add backend='gpu'
+result_gpu = boxcount_from_array(arr, mode='single', backend='gpu')
+print('GPU Result:', result_gpu)
+
+# Fractal dimension (CPU or GPU)
+fd_cpu = fractal_dimension_from_array(arr)
+fd_gpu = fractal_dimension_from_array(arr, backend='gpu')
+print(f'Fractal Dimension: CPU={fd_cpu:.3f}, GPU={fd_gpu:.3f}')
+```
+
+### Processing a File
+
+```python
+from spacial_boxcounting.api import boxcount_from_file, fractal_dimension
+
+# CPU
+result = boxcount_from_file('path/to/image.jpg', mode='spatial')
+fd = fractal_dimension('path/to/image.jpg')
+
+# GPU
+result = boxcount_from_file('path/to/image.jpg', mode='spatial', backend='gpu')
+fd = fractal_dimension('path/to/image.jpg', backend='gpu')
 ```
 
 ## Command-Line Interface
-Process images directly from the command line:
 
 ```bash
-# Process a single file
+# CPU (default)
 spacial-boxcount single --file path/to/image.jpg --mode spatial
 
-# Process all images in a directory
-spacial-boxcount batch --folder path/to/images/ --mode single
+# GPU — just add --backend gpu
+spacial-boxcount single --file path/to/image.jpg --mode spatial --backend gpu
 
-# Process with Hilbert curve mapping (for binary files)
+# Batch processing with GPU
+spacial-boxcount batch --folder path/to/images/ --mode single --backend gpu
+
+# With Hilbert curve mapping (for binary files)
 spacial-boxcount single --file path/to/data.bin --mode spatial --hilbert
 ```
+
+## GPU Acceleration
+
+GPU acceleration is available via CuPy. Use the `backend="gpu"` parameter:
+
+```python
+from spacial_boxcounting.api import boxcount_from_array
+
+# All API functions accept backend='cpu' (default) or backend='gpu'
+result = boxcount_from_array(arr, mode='single', backend='gpu')
+```
+
+If CuPy is not installed, requesting `backend="gpu"` raises a clear `ImportError`:
+
+```
+ImportError: GPU backend requested but CuPy is not installed.
+Install with: pip install spacial_boxcounting[gpu]
+```
+
+### GPU Backend Detection
+
+```python
+from spacial_boxcounting import CUPY_AVAILABLE, GPU_BACKEND
+
+print(f'CuPy available: {CUPY_AVAILABLE}')
+print(f'GPU backend: {GPU_BACKEND}')  # 'cuda', 'rocm', or None
+```
+
+### Performance
+
+Measured on RTX 4060 Ti (batched 4D-tensor implementation):
+
+| Image Size | Boxsize=2 | Boxsize=4 | Boxsize=16 |
+|------------|-----------|-----------|------------|
+| 128×128    | 9×        | 5×        | 1×         |
+| 256×256    | 9×        | 18×       | 4×         |
+| 512×512    | 3×        | 12×       | 16×        |
+| 1024×1024  | 2.6×      | 11×       | **35×**    |
+
+- **Small images (< 128×128)**: CPU may be faster due to GPU transfer overhead
+- **Large images (> 512×512)**: GPU provides 2–35× speedup
+- **AMD users**: ROCm support is experimental (`pip install spacial_boxcounting[gpu-amd]`)
 
 ## Hilbert Curve Mapping for Binary Data
 For binary files, the Hilbert curve mapping preserves data locality when converting 1D data streams to 2D arrays for spatial analysis:
 
 ```python
-# Process binary file with Hilbert curve mapping
 result = boxcount_from_file('data.bin', mode='spatial', hilbert=True)
-fd = fractal_dimension_from_file('data.bin', hilbert=True)
-```
-
-## GPU Acceleration
-If Cupy is installed with CUDA support, GPU accelerated functions will automatically be used:
-
-```python
-import numpy as np
-from spacial_boxcounting.core import spacialBoxcount_gpu
-
-arr = np.random.randint(0, 256, size=(512, 512)).astype(np.uint8)
-# GPU processing for large images (significant speedup)
-result_gpu = spacialBoxcount_gpu(arr, iteration=2, MaxValue=256)  # box size 8
-print('GPU spatial result shape:', [r.shape for r in result_gpu])
+fd = fractal_dimension('data.bin', hilbert=True)
 ```
 
 ## Batch Processing
@@ -113,18 +146,10 @@ Process multiple images with progress tracking:
 ```python
 from spacial_boxcounting.batch import batch_boxcount
 
-# Process all images in a directory
 results = batch_boxcount('path/to/images/', mode='single')
 for filename, result in results.items():
     print(f'{filename}: {result}')
 ```
-
-## Performance
-Performance varies by hardware and image size:
-- **Small images (< 256x256)**: CPU often faster due to GPU overhead
-- **Large images (> 512x512)**: GPU provides 2-10x speedup
-- **Batch processing**: GPU provides 5-50x speedup for large batches
-- **AMD users**: CPU optimization available (ROCm support experimental)
 
 ## License
 See [LICENSE.txt](LICENSE.txt) for details.

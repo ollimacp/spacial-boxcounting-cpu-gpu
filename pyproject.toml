@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spacial_boxcounting"
-version = "0.1.0"
+version = "0.3.0"
 description = "Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support"
 readme = "README.md"
 license = "MIT"
@@ -48,6 +48,9 @@ dependencies = [
 [project.optional-dependencies]
 gpu = [
     "cupy-cuda12x>=9.0.0"
+]
+gpu-amd = [
+    "cupy-rocm-5-0>=12.0.0"
 ]
 dev = [
     "pytest>=6.0.0",

@@ -8,7 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='spacial_boxcounting',
-    version='0.1.0',
+    version='0.3.0',
     description='Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -26,6 +26,7 @@ setup(
     ],
     extras_require={
         'gpu': ['cupy-cuda12x>=9.0.0'],
+        'gpu-amd': ['cupy-rocm-5-0>=12.0.0'],
         'dev': [
             'pytest>=6.0.0',
             'sphinx>=4.0.0'
