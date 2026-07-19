@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spacial_boxcounting"
-version = "0.3.1"
+version = "0.3.2"
 description = "Convenient package for spatial box counting and fractal analysis across data types with CPU and GPU support"
 readme = "README.md"
 license = "MIT"
@@ -56,7 +56,7 @@ dev = [
     "pytest>=6.0.0",
     "sphinx>=4.0.0",
     "bandit>=1.7.0",
-    "safety>=3.0.0"
+    "pip-audit>=2.7.3"
 ]
 
 [project.urls]

@@ -25,8 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install . pip-audit
-      - run: pip-audit
+      - run: pip install pip-audit
+      - run: pip-audit -r requirements.lock
 
   gitleaks:
     runs-on: ubuntu-latest
